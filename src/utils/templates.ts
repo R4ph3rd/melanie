@@ -1,6 +1,37 @@
 import type { ExampleSketch } from './types'
 
-export const DEFAULT_P5_CODE = `let numCircles = 8;
+export const DEFAULT_P5_CODE = `
+let bgBrightness = 255;
+
+function setup() {
+  createCanvas(460, 400);
+}
+
+function draw() {
+  background(bgBrightness);
+}`
+
+export const DEFAULT_THREEJS_CODE = `
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(60, 460 / 400, 0.1, 100);
+camera.position.z = 3;
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(460, 400);
+renderer.setClearColor(0x111111);
+document.body.appendChild(renderer.domElement);
+
+
+function animate() {
+  requestAnimationFrame(animate);
+  renderer.render(scene, camera);
+}
+
+animate();
+}`
+
+export const CONCENTRIC_CIRCLES = `
+let numCircles = 8;
 let circleSize = 48;
 let strokeW = 2;
 let bgBrightness = 255;
@@ -21,7 +52,8 @@ function draw() {
   }
 }`
 
-export const DEFAULT_THREEJS_CODE = `const scene = new THREE.Scene();
+export const TORUS = `
+const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, 460 / 400, 0.1, 100);
 camera.position.z = 3;
 
@@ -49,7 +81,7 @@ export const EXAMPLE_SKETCHES: ExampleSketch[] = [
     title: 'Concentric Circles',
     description: 'Simple concentric circles',
     library: 'p5js',
-    code: DEFAULT_P5_CODE,
+    code: CONCENTRIC_CIRCLES,
   },
   {
     id: 'bouncing',
@@ -246,7 +278,7 @@ function draw() {
     title: '3D Torus',
     description: 'Rotating torus with normals',
     library: 'threejs',
-    code: DEFAULT_THREEJS_CODE,
+    code: TORUS,
   },
   {
     id: 'particles3d',

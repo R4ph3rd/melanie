@@ -15,14 +15,14 @@ import type {
   LibraryType,
   OperatorType,
 } from '../utils/types'
-import { DEFAULT_P5_CODE, DEFAULT_THREEJS_CODE } from '../utils/templates'
+import { CONCENTRIC_CIRCLES, TORUS } from '../utils/templates'
 import { extractParameters } from '../utils/codeUtils'
 import { DEFAULT_MODEL } from '../api/claude'
 
 const STORAGE_API_KEY = 'melanie_api_key'
 const STORAGE_MODEL   = 'melanie_model'
 
-const rootCode = DEFAULT_P5_CODE
+const rootCode = CONCENTRIC_CIRCLES
 const rootParams = extractParameters(rootCode)
 
 const initialNodes: AppNode[] = [
@@ -126,7 +126,7 @@ export const useStore = create<melanieStore>((set, get) => ({
 
   addSketchNode: ({ code, library = 'p5js', position = { x: 200, y: 200 }, title, sourcePrompt }) => {
     const id = nanoid(8)
-    const resolvedCode = code ?? (library === 'p5js' ? DEFAULT_P5_CODE : DEFAULT_THREEJS_CODE)
+    const resolvedCode = code ?? (library === 'p5js' ? CONCENTRIC_CIRCLES : TORUS)
     const nodeTitle = title ?? get().nextSketchTitle()
     const newNode: AppNode = {
       id,
