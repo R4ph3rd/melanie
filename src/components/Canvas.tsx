@@ -12,7 +12,7 @@ import {
   type Edge,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { useStore } from '../store'
+import { useStore } from '../store/store'
 import SketchNode from './nodes/SketchNode'
 import OperatorNode from './nodes/OperatorNode'
 

@@ -1,4 +1,4 @@
-import { useStore } from './store'
+import { useStore } from './store/store'
 import TopBar from './components/TopBar'
 import Canvas from './components/Canvas'
 import ExamplesPanel from './components/ExamplesPanel'

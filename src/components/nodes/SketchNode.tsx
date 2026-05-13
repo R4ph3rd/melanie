@@ -1,8 +1,8 @@
 import { memo, useState, useCallback } from 'react'
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react'
 import { nanoid } from 'nanoid'
-import type { SketchNodeData, OperatorType } from '../../types'
-import { useStore } from '../../store'
+import type { SketchNodeData, OperatorType } from '../../utils/types'
+import { useStore } from '../../store/store'
 import SketchPreview from '../SketchPreview'
 import ParameterSliders from '../ParameterSliders'
 

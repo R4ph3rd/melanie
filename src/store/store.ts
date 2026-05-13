@@ -14,10 +14,10 @@ import type {
   Parameter,
   LibraryType,
   OperatorType,
-} from './types'
-import { DEFAULT_P5_CODE, DEFAULT_THREEJS_CODE } from './utils/templates'
-import { extractParameters } from './utils/codeUtils'
-import { DEFAULT_MODEL } from './api/claude'
+} from '../utils/types'
+import { DEFAULT_P5_CODE, DEFAULT_THREEJS_CODE } from '../utils/templates'
+import { extractParameters } from '../utils/codeUtils'
+import { DEFAULT_MODEL } from '../api/claude'
 
 const STORAGE_API_KEY = 'melanie_api_key'
 const STORAGE_MODEL   = 'melanie_model'

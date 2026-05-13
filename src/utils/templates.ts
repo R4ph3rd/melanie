@@ -1,4 +1,4 @@
-import type { ExampleSketch } from '../types'
+import type { ExampleSketch } from './types'
 
 export const DEFAULT_P5_CODE = `let numCircles = 8;
 let circleSize = 48;

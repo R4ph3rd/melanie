@@ -1,6 +1,6 @@
 import { memo } from 'react'
-import type { Parameter } from '../types'
-import { useStore } from '../store'
+import type { Parameter } from '../utils/types'
+import { useStore } from '../store/store'
 import { updateParameterInCode } from '../utils/codeUtils'
 import { extractParameters } from '../utils/codeUtils'
 

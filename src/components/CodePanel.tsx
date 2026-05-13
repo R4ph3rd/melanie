@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import CodeMirror from '@uiw/react-codemirror'
 import { javascript } from '@codemirror/lang-javascript'
 import { vscodeDark } from '@uiw/codemirror-theme-vscode'
-import { useStore } from '../store'
+import { useStore } from '../store/store'
 
 interface Props {
   nodeId: string

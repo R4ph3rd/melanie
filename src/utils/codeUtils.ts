@@ -1,4 +1,4 @@
-import type { Parameter, LibraryType } from '../types'
+import type { Parameter, LibraryType } from './types'
 
 // Extract global numeric variables from p5.js or three.js code
 export function extractParameters(code: string): Parameter[] {

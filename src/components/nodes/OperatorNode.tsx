@@ -1,7 +1,7 @@
 import { memo, useState, useEffect, useRef, useCallback } from 'react'
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react'
-import type { OperatorNodeData } from '../../types'
-import { useStore } from '../../store'
+import type { OperatorNodeData } from '../../utils/types'
+import { useStore } from '../../store/store'
 import {
   getSystemForOperator,
   buildModifyMessages,

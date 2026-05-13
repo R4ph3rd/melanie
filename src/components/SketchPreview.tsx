@@ -1,5 +1,5 @@
 import { useRef, useEffect, memo } from 'react'
-import type { LibraryType } from '../types'
+import type { LibraryType } from '../utils/types'
 import { buildIframeSrcdoc } from '../utils/codeUtils'
 
 interface Props {

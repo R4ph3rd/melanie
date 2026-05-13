@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { EXAMPLE_SKETCHES } from '../utils/templates'
-import { useStore } from '../store'
+import { useStore } from '../store/store'
 import SketchPreview from './SketchPreview'
 
 export default function ExamplesPanel() {
@@ -29,9 +29,7 @@ export default function ExamplesPanel() {
     <div className="flex flex-col h-full" style={{ background: '#0e0e14', borderRight: '1px solid #222' }}>
       {/* Header */}
       <div className="px-3 pt-3 pb-2 flex-shrink-0">
-        <h2 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">
-          Examples
-        </h2>
+        <h2 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2"> Examples </h2>
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}

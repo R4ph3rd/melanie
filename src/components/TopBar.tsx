@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useStore } from '../store'
+import { useStore } from '../store/store'
 import { AVAILABLE_MODELS } from '../api/claude'
 
 export default function TopBar() {
@@ -42,7 +42,7 @@ export default function TopBar() {
           melanie
         </span>
         <span className="text-xs text-text-muted hidden sm:block">
-          : Node-based Creative Coding with AI
+          Node-based interface for assisted creative coding 
         </span>
 
         <div className="flex-1" />

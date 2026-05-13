@@ -1,4 +1,4 @@
-import type { LibraryType, OperatorType } from '../types'
+import type { LibraryType, OperatorType } from '../utils/types'
 
 const BASE_RESTRICTIONS = `
 Restrictions:
