@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Design system CSS custom properties ── */
+:root {
+  --color-bg:             #080808;
+  --color-surface:        #111111;
+  --color-surface2:       #1a1a1a;
+  --color-surface3:       #222222;
+  --color-surface4:       #2a2a2a;
+  --color-border:         #333333;
+  --color-border-bright:  #444444;
+  --color-text-primary:   #f0f0f0;
+  --color-text-secondary: #a0a0a0;
+  --color-text-muted:     #606060;
+  --color-accent:         #7c3aed;
+  --color-accent-hover:   #6d28d9;
+}
+
+/* ── Global reset ── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Custom scrollbar ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #2a2a3a; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #3a3a4a; }
+
+/* ── ReactFlow overrides ── */
+.react-flow__background { background: #080808 !important; }
+.react-flow__controls { background: #111118 !important; border-color: #2a2a3a !important; }
+.react-flow__controls button {
+  background: #111118 !important;
+  border-color: #2a2a3a !important;
+  color: #a0a0a0 !important;
+  fill: #a0a0a0 !important;
+}
+.react-flow__controls button:hover {
+  background: #1e1e2e !important;
+  color: #f0f0f0 !important;
+  fill: #f0f0f0 !important;
+}
+.react-flow__minimap { background: #0e0e16 !important; }
+.react-flow__edge-path { stroke: #4a4a6a; }
+.react-flow__handle { cursor: pointer !important; }
+
+/* ── Range input styling ── */
+input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: #2a2a3a;
+  border-radius: 9999px;
+  height: 3px;
+  outline: none;
+}
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  background: #7c3aed;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid #0e0e14;
+}
+input[type='range']::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  background: #7c3aed;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid #0e0e14;
+}
+
+/* ── Transition helpers ── */
+.panel-slide {
+  transition: width 0.2s ease, opacity 0.2s ease;
+}
+
+/* ── Code panel CodeMirror overrides ── */
+.cm-editor { height: 100%; }
+.cm-editor .cm-scroller { font-family: 'JetBrains Mono', 'Fira Code', monospace !important; }
