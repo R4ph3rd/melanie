@@ -60,7 +60,7 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
         return
       }
 
-      // modify / extract — create operator + empty target sketch
+      // modify / extract : create operator + empty target sketch
       const targetId = store.addSketchNode({
         code: '',
         library: data.library,

@@ -42,7 +42,7 @@ export default function TopBar() {
           melanie
         </span>
         <span className="text-xs text-text-muted hidden sm:block">
-          — Node-based Creative Coding with AI
+          : Node-based Creative Coding with AI
         </span>
 
         <div className="flex-1" />
@@ -148,11 +148,11 @@ export default function TopBar() {
             <button onClick={() => setShowHelp(false)} className="text-text-muted hover:text-text-primary">✕</button>
           </div>
           <div className="space-y-2 text-text-secondary">
-            <p><span className="text-accent">✦ Modify</span> — type a natural language prompt to transform a sketch</p>
-            <p><span className="text-blue-400">⊕ Merge</span> — click Merge, then click another sketch to combine them</p>
-            <p><span className="text-green-400">⊟ Diff</span> — compare two sketches and get a description</p>
-            <p><span className="text-yellow-600">⊆ Extract</span> — isolate a visual property as a new sketch</p>
-            <p><span className="text-gray-400">⎘ Duplicate</span> — create an exact copy to branch from</p>
+            <p><span className="text-accent">✦ Modify</span> : type a natural language prompt to transform a sketch</p>
+            <p><span className="text-blue-400">⊕ Merge</span> : click Merge, then click another sketch to combine them</p>
+            <p><span className="text-green-400">⊟ Diff</span> : compare two sketches and get a description</p>
+            <p><span className="text-yellow-600">⊆ Extract</span> : isolate a visual property as a new sketch</p>
+            <p><span className="text-gray-400">⎘ Duplicate</span> : create an exact copy to branch from</p>
             <hr className="border-border my-2" />
             <p>Double-click a node title to rename it.</p>
             <p>Click <strong className="text-text-primary">&lt;/&gt; Show Code</strong> to edit the source directly.</p>

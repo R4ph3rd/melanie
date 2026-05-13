@@ -19,7 +19,7 @@ export default {
         'text-muted':     '#606060',
         'text-disabled':  '#404040',
 
-        // Accent — primary (purple)
+        // Accent : primary (purple)
         accent:         '#7c3aed',
         'accent-hover': '#6d28d9',
         'accent-dim':   '#3b1f6e',
