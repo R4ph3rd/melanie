@@ -1,6 +1,12 @@
 import { memo, useState, useCallback } from 'react'
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react'
 import { nanoid } from 'nanoid'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import {
+  faPlay, faPause, faRotateRight, faCode, faXmark,
+  faMagicWandSparkles, faClone, faCodeMerge, faCodeBranch, faScissors,
+  faArrowRightArrowLeft,
+} from '@fortawesome/free-solid-svg-icons'
 import type { SketchNodeData, OperatorType } from '../../utils/types'
 import { useStore } from '../../store/store'
 import SketchPreview from '../SketchPreview'
@@ -11,74 +17,59 @@ type SketchNodeType = Node<SketchNodeData, 'sketch'>
 const PREVIEW_W = 260
 const PREVIEW_H = 200
 
-const OP_MENU: { type: OperatorType; label: string; icon: string; color: string }[] = [
-  { type: 'modify',    label: 'Modify',    icon: '✦', color: '#7c3aed' },
-  { type: 'duplicate', label: 'Duplicate', icon: '⎘', color: '#4b5563' },
-  { type: 'merge',     label: 'Merge',     icon: '⊕', color: '#1d4ed8' },
-  { type: 'diff',      label: 'Diff',      icon: '⊟', color: '#047857' },
-  { type: 'extract',   label: 'Extract',   icon: '⊆', color: '#b45309' },
-]
-
 const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<SketchNodeType>) {
-  const [menuOpen, setMenuOpen] = useState(false)
   const [editingTitle, setEditingTitle] = useState(false)
-
   const store = useStore()
 
-  const handleOperation = useCallback(
-    (opType: OperatorType) => {
-      setMenuOpen(false)
-      const pos = store.getNodePosition(id)
-      const baseX = (pos?.x ?? 0) + PREVIEW_W + 120
-      const baseY = (pos?.y ?? 0)
+  // ─── Toolbar-op click handler ──────────────────────────────────────────────
+  // When a toolbar op is pending, clicking this sketch applies it.
+  const handleToolbarOpTarget = useCallback(() => {
+    const op = store.pendingToolbarOp
+    if (!op) return
+    store.setPendingToolbarOp(null)
 
-      if (opType === 'duplicate') {
-        const newId = store.addSketchNode({
-          code: data.code,
-          library: data.library,
-          position: { x: baseX + 300, y: baseY },
-          title: data.title + ' copy',
-        })
-        const opId = store.addOperatorNode({
-          operatorType: 'duplicate',
-          sourceNodeIds: [id],
-          position: { x: baseX, y: baseY + 70 },
-        })
-        store.updateOperator(opId, { targetNodeId: newId })
-        store.addEdge({ id: nanoid(6), source: id, target: opId, sourceHandle: 'right' })
-        store.addEdge({ id: nanoid(6), source: opId, target: newId, targetHandle: 'left' })
-        return
-      }
+    const pos   = store.getNodePosition(id)
+    const baseX = (pos?.x ?? 0) + PREVIEW_W + 120
+    const baseY = (pos?.y ?? 0)
 
-      if (opType === 'merge') {
-        store.setMergingSourceId(id, 'merge')
-        return
-      }
+    if (op === 'merge' || op === 'diff') {
+      // Set this node as merge source — user then clicks target
+      store.setMergingSourceId(id, op)
+      return
+    }
 
-      if (opType === 'diff') {
-        store.setMergingSourceId(id, 'diff')
-        return
-      }
-
-      // modify / extract : create operator + empty target sketch
-      const targetId = store.addSketchNode({
-        code: '',
-        library: data.library,
-        position: { x: baseX + 340, y: baseY },
-        title: store.nextSketchTitle(),
+    if (op === 'duplicate') {
+      const newId = store.addSketchNode({
+        code: data.code, library: data.library,
+        position: { x: baseX + 300, y: baseY },
+        title: data.title + ' copy',
       })
       const opId = store.addOperatorNode({
-        operatorType: opType,
-        sourceNodeIds: [id],
-        position: { x: baseX, y: baseY + 60 },
+        operatorType: 'duplicate', sourceNodeIds: [id],
+        position: { x: baseX, y: baseY + 70 },
       })
-      store.updateOperator(opId, { targetNodeId: targetId })
-      store.addEdge({ id: nanoid(6), source: id,   target: opId,     sourceHandle: 'right' })
-      store.addEdge({ id: nanoid(6), source: opId, target: targetId, targetHandle: 'left'  })
-    },
-    [id, data, store]
-  )
+      store.updateOperator(opId, { targetNodeId: newId })
+      store.addEdge({ id: nanoid(6), source: id,   target: opId, sourceHandle: 'right' })
+      store.addEdge({ id: nanoid(6), source: opId, target: newId, targetHandle: 'left' })
+      return
+    }
 
+    // modify / extract
+    const targetId = store.addSketchNode({
+      code: '', library: data.library,
+      position: { x: baseX + 340, y: baseY },
+      title: store.nextSketchTitle(),
+    })
+    const opId = store.addOperatorNode({
+      operatorType: op, sourceNodeIds: [id],
+      position: { x: baseX, y: baseY + 60 },
+    })
+    store.updateOperator(opId, { targetNodeId: targetId })
+    store.addEdge({ id: nanoid(6), source: id,   target: opId,     sourceHandle: 'right' })
+    store.addEdge({ id: nanoid(6), source: opId, target: targetId, targetHandle: 'left'  })
+  }, [id, data, store])
+
+  // ─── Merge target (existing two-step flow) ─────────────────────────────────
   const handleMergeTarget = useCallback(() => {
     const mergingId = store.mergingSourceId
     const opType    = store.pendingOpType ?? 'merge'
@@ -87,16 +78,15 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
       return
     }
     store.setMergingSourceId(null)
+
     const pos1 = store.getNodePosition(mergingId)
     const pos2 = store.getNodePosition(id)
-    const opX = ((pos1?.x ?? 0) + (pos2?.x ?? 0)) / 2 + 140
-    const opY = ((pos1?.y ?? 0) + (pos2?.y ?? 0)) / 2 + 100
+    const opX  = ((pos1?.x ?? 0) + (pos2?.x ?? 0)) / 2 + 140
+    const opY  = ((pos1?.y ?? 0) + (pos2?.y ?? 0)) / 2 + 100
 
     if (opType === 'diff') {
-      // Diff: no target sketch, just the operator node
       const opId = store.addOperatorNode({
-        operatorType: 'diff',
-        sourceNodeIds: [mergingId, id],
+        operatorType: 'diff', sourceNodeIds: [mergingId, id],
         position: { x: opX, y: opY },
       })
       store.addEdge({ id: nanoid(6), source: mergingId, target: opId, sourceHandle: 'right' })
@@ -104,18 +94,15 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
       return
     }
 
-    // Merge: create target sketch
-    const targetX = Math.max((pos1?.x ?? 0), (pos2?.x ?? 0)) + 400
-    const targetY = opY - 60
+    const targetX  = Math.max((pos1?.x ?? 0), (pos2?.x ?? 0)) + 400
+    const targetY  = opY - 60
     const targetId = store.addSketchNode({
-      code: '',
-      library: data.library,
+      code: '', library: data.library,
       position: { x: targetX, y: targetY },
       title: store.nextSketchTitle(),
     })
     const opId = store.addOperatorNode({
-      operatorType: 'merge',
-      sourceNodeIds: [mergingId, id],
+      operatorType: 'merge', sourceNodeIds: [mergingId, id],
       position: { x: opX, y: opY },
     })
     store.updateOperator(opId, { targetNodeId: targetId })
@@ -124,25 +111,89 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
     store.addEdge({ id: nanoid(6), source: opId,      target: targetId, targetHandle: 'left'  })
   }, [id, data.library, store])
 
-  const isMergingTarget = !!store.mergingSourceId && store.mergingSourceId !== id
-  const pendingLabel    = store.pendingOpType === 'diff' ? 'Click to diff' : 'Click to merge'
+  // ─── Param-transfer drop handler ──────────────────────────────────────────
+  const handleParamDrop = useCallback(() => {
+    const dp = store.draggingParam
+    if (!dp || dp.sourceNodeId === id) return
+    store.setDraggingParam(null)
+
+    const pos   = store.getNodePosition(id)
+    const baseX = (pos?.x ?? 0) + PREVIEW_W + 120
+    const baseY = (pos?.y ?? 0)
+
+    // Create output sketch C
+    const targetId = store.addSketchNode({
+      code: '', library: data.library,
+      position: { x: baseX + 340, y: baseY },
+      title: store.nextSketchTitle(),
+    })
+    // Create operator node (modify type, auto-generates)
+    const opId = store.addOperatorNode({
+      operatorType: 'modify', sourceNodeIds: [id],
+      position: { x: baseX, y: baseY + 60 },
+    })
+    const transferPrompt =
+      `Incorporate the parameter "${dp.param.semanticLabel || dp.param.label}" ` +
+      `(variable: ${dp.param.name}, value: ${dp.param.value}) from another sketch. ` +
+      `Add a global variable that controls a visually equivalent or complementary effect. ` +
+      `Source sketch context:\n${dp.sourceCode.slice(0, 600)}`
+
+    store.updateOperator(opId, {
+      targetNodeId: targetId,
+      prompt: transferPrompt,
+      autoGenerate: true,
+      paramTransferLabel: dp.param.semanticLabel || dp.param.label,
+    })
+    // B → operator → C  (normal edges)
+    store.addEdge({ id: nanoid(6), source: id,   target: opId,     sourceHandle: 'right' })
+    store.addEdge({ id: nanoid(6), source: opId, target: targetId, targetHandle: 'left'  })
+    // A → C  (param-transfer background edge)
+    store.addEdge({
+      id: nanoid(6), source: dp.sourceNodeId, target: targetId,
+      data: { kind: 'param-transfer' },
+    })
+  }, [id, data.library, store])
+
+  // ─── Click dispatch ────────────────────────────────────────────────────────
+  const handleNodeClick = useCallback(() => {
+    if (store.pendingToolbarOp) { handleToolbarOpTarget(); return }
+    if (store.mergingSourceId && store.mergingSourceId !== id) { handleMergeTarget(); return }
+    if (store.draggingParam && store.draggingParam.sourceNodeId !== id) { handleParamDrop(); return }
+  }, [store, handleToolbarOpTarget, handleMergeTarget, handleParamDrop, id])
+
+  // ─── Visual state flags ────────────────────────────────────────────────────
+  const isMergingTarget    = !!store.mergingSourceId && store.mergingSourceId !== id
+  const isToolbarOpTarget  = !!store.pendingToolbarOp
+  const isParamDropTarget  = !!store.draggingParam && store.draggingParam.sourceNodeId !== id
+  const isInteractiveTarget = isMergingTarget || isToolbarOpTarget || isParamDropTarget
+
+  let overlayLabel = ''
+  if (isMergingTarget)
+    overlayLabel = store.pendingOpType === 'diff' ? 'Click to compare' : 'Click to merge'
+  else if (isToolbarOpTarget)
+    overlayLabel = `Click to ${store.pendingToolbarOp}`
+  else if (isParamDropTarget)
+    overlayLabel = `Drop "${store.draggingParam!.param.semanticLabel || store.draggingParam!.param.label}"`
+
+  let borderStyle = selected ? '1.5px solid #7c3aed' : '1px solid #2a2a3a'
+  if (isMergingTarget)   borderStyle = '1.5px dashed #1d4ed8'
+  if (isToolbarOpTarget) borderStyle = '1.5px dashed #7c3aed'
+  if (isParamDropTarget) borderStyle = '1.5px dashed #a78bfa'
 
   return (
     <div
       className="sketch-node"
       style={{
         background: '#131825',
-        border: selected
-          ? '1.5px solid #7c3aed'
-          : isMergingTarget
-          ? '1.5px dashed #1d4ed8'
-          : '1px solid #2a2a3a',
+        border: borderStyle,
         borderRadius: 8,
-        boxShadow: selected ? '0 0 0 3px rgba(124,58,237,0.2), 0 4px 24px rgba(0,0,0,0.6)' : '0 4px 24px rgba(0,0,0,0.5)',
+        boxShadow: selected
+          ? '0 0 0 3px rgba(124,58,237,0.2), 0 4px 24px rgba(0,0,0,0.6)'
+          : '0 4px 24px rgba(0,0,0,0.5)',
         minWidth: PREVIEW_W + 20,
-        cursor: isMergingTarget ? 'crosshair' : 'default',
+        cursor: isInteractiveTarget ? 'crosshair' : 'default',
       }}
-      onClick={isMergingTarget ? handleMergeTarget : undefined}
+      onClick={handleNodeClick}
     >
       {/* Handles */}
       <Handle type="target" position={Position.Left}  id="left"  style={{ background: '#7c3aed', width: 10, height: 10 }} />
@@ -154,9 +205,12 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
           <input
             autoFocus
             defaultValue={data.title}
-            onBlur={(e) => { store.updateSketchTitle(id, e.target.value); setEditingTitle(false) }}
-            onKeyDown={(e) => { if (e.key === 'Enter') { store.updateSketchTitle(id, e.currentTarget.value); setEditingTitle(false) } }}
-            className="bg-surface3 text-text-primary text-sm font-medium rounded px-1 w-32 outline-none border border-accent"
+            onBlur={(e)    => { store.updateSketchTitle(id, e.target.value); setEditingTitle(false) }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') { store.updateSketchTitle(id, e.currentTarget.value); setEditingTitle(false) }
+            }}
+            className="bg-surface3 text-text-primary text-sm font-medium rounded px-1 w-32 outline-none border border-accent nodrag"
+            onClick={(e) => e.stopPropagation()}
           />
         ) : (
           <span
@@ -171,23 +225,23 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
             className="text-2xs px-1.5 py-0.5 rounded"
             style={{
               background: data.library === 'p5js' ? '#1a2a1a' : '#1a1a2e',
-              color: data.library === 'p5js' ? '#4ade80' : '#60a5fa',
+              color:      data.library === 'p5js' ? '#4ade80' : '#60a5fa',
             }}
           >
             {data.library === 'p5js' ? 'p5' : '3js'}
           </span>
           <button
-            onClick={() => store.deleteNode(id)}
+            onClick={(e) => { e.stopPropagation(); store.deleteNode(id) }}
             className="text-text-muted hover:text-error text-xs w-5 h-5 flex items-center justify-center rounded hover:bg-surface3"
             title="Delete node"
           >
-            ✕
+            <FontAwesomeIcon icon={faXmark} />
           </button>
         </div>
       </div>
 
-      {/* Preview or loading state */}
-      <div className="relative" style={{ width: PREVIEW_W + 20, height: PREVIEW_H + 10, padding: '5px 10px 5px 10px' }}>
+      {/* Preview */}
+      <div className="relative" style={{ width: PREVIEW_W + 20, height: PREVIEW_H + 10, padding: '5px 10px' }}>
         {data.code ? (
           <SketchPreview
             code={data.code}
@@ -208,74 +262,72 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
       </div>
 
       {/* Controls */}
-      <div className="flex items-center gap-1 px-3 pb-2">
+      <div className="flex items-center gap-1 px-3 pb-2" onClick={(e) => e.stopPropagation()}>
         <button
           onClick={() => store.updateSketchRunning(id, !data.isRunning)}
           className="flex items-center gap-1 px-2 py-1 rounded text-xs text-text-secondary hover:text-text-primary hover:bg-surface3"
           title={data.isRunning ? 'Pause' : 'Play'}
         >
-          {data.isRunning ? '⏸' : '▶'}
+          <FontAwesomeIcon icon={data.isRunning ? faPause : faPlay} />
         </button>
         <button
           onClick={() => store.reloadSketch(id)}
           className="flex items-center gap-1 px-2 py-1 rounded text-xs text-text-secondary hover:text-text-primary hover:bg-surface3"
           title="Reload"
         >
-          ↺
+          <FontAwesomeIcon icon={faRotateRight} />
         </button>
         <button
           onClick={() => store.setActiveCodeNodeId(store.activeCodeNodeId === id ? null : id)}
-          className="flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors"
+          className="flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-colors"
           style={{
-            color: store.activeCodeNodeId === id ? '#7c3aed' : '#a0a0a0',
+            color:      store.activeCodeNodeId === id ? '#7c3aed' : '#a0a0a0',
             background: store.activeCodeNodeId === id ? 'rgba(124,58,237,0.15)' : 'transparent',
           }}
           title="Toggle code editor"
         >
-          {'</>'} {store.activeCodeNodeId === id ? 'Hide Code' : 'Show Code'}
+          <FontAwesomeIcon icon={faCode} />
+          {store.activeCodeNodeId === id ? 'Hide Code' : 'Code'}
         </button>
-        <div className="flex-1" />
-        {/* Operation menu trigger */}
-        <div className="relative">
-          <button
-            onClick={() => setMenuOpen((v) => !v)}
-            className="px-2 py-1 rounded text-xs text-text-secondary hover:text-text-primary hover:bg-surface3 border border-border-bright"
-            title="Operations"
-          >
-            + Op
-          </button>
-          {menuOpen && (
-            <div
-              className="absolute right-0 bottom-full mb-1 z-50 rounded-md overflow-hidden shadow-popup"
-              style={{ background: '#1a1a2a', border: '1px solid #333', minWidth: 130 }}
-              onMouseLeave={() => setMenuOpen(false)}
-            >
-              {OP_MENU.map((op) => (
-                <button
-                  key={op.type}
-                  onClick={() => handleOperation(op.type)}
-                  className="w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-surface3"
-                  style={{ color: op.color }}
-                >
-                  <span>{op.icon}</span>
-                  <span className="text-text-secondary">{op.label}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
       </div>
 
       {/* Parameter sliders */}
       <ParameterSliders nodeId={id} params={data.parameters} />
 
-      {/* Merge mode hint */}
-      {isMergingTarget && (
+      {/* Interactive target overlay — pointer-events-auto so clicks anywhere on
+          the node are captured when an operation mode is active, even if child
+          elements would otherwise stop propagation. */}
+      {isInteractiveTarget && (
         <div
-          className="absolute inset-0 flex items-center justify-center rounded-lg text-sm font-medium pointer-events-none"
-          style={{ background: 'rgba(29,78,216,0.15)', color: '#60a5fa' }}
+          className="absolute inset-0 flex items-center justify-center rounded-lg text-sm font-medium"
+          style={{ cursor: 'crosshair',
+            background: isParamDropTarget
+              ? 'rgba(124,58,237,0.12)'
+              : isMergingTarget
+              ? 'rgba(29,78,216,0.12)'
+              : 'rgba(124,58,237,0.08)',
+            color: isParamDropTarget ? '#a78bfa' : isMergingTarget ? '#60a5fa' : '#c084fc',
+          }}
+          onClick={handleNodeClick}
         >
-          {pendingLabel}
+          <div className="flex items-center gap-2 bg-black/40 px-3 py-1.5 rounded-full backdrop-blur-sm">
+            {isParamDropTarget && <FontAwesomeIcon icon={faArrowRightArrowLeft} />}
+            {isMergingTarget && (store.pendingOpType === 'diff'
+              ? <FontAwesomeIcon icon={faCodeBranch} />
+              : <FontAwesomeIcon icon={faCodeMerge} />)}
+            {isToolbarOpTarget && !isMergingTarget && (() => {
+              const icons: Record<string, typeof faMagicWandSparkles> = {
+                modify:    faMagicWandSparkles,
+                duplicate: faClone,
+                merge:     faCodeMerge,
+                diff:      faCodeBranch,
+                extract:   faScissors,
+              }
+              const OpIcon = icons[store.pendingToolbarOp!] ?? faMagicWandSparkles
+              return <FontAwesomeIcon icon={OpIcon} />
+            })()}
+            <span>{overlayLabel}</span>
+          </div>
         </div>
       )}
     </div>
