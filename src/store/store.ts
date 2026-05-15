@@ -16,13 +16,22 @@ import type {
   OperatorType,
 } from '../utils/types'
 import { CONCENTRIC_CIRCLES, TORUS } from '../utils/templates'
-import { extractParameters } from '../utils/codeUtils'
-import { DEFAULT_MODEL } from '../api/claude'
+import { extractParameters, updateParameterInCode } from '../utils/codeUtils'
+import { defaultProviderAndModel } from '../api/providers'
 
-const STORAGE_API_KEY = 'melanie_api_key'
-const STORAGE_MODEL   = 'melanie_model'
+// ─── LocalStorage keys ────────────────────────────────────────────────────────
+const STORAGE_KEYS     = 'melanie_api_keys'    // JSON: Record<providerId, apiKey>
+const STORAGE_PROVIDER = 'melanie_provider'
+const STORAGE_MODEL    = 'melanie_model'
 
-const rootCode = CONCENTRIC_CIRCLES
+function loadKeys(): Record<string, string> {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEYS) ?? '{}') } catch { return {} }
+}
+
+const { providerId: DEFAULT_PROVIDER, modelId: DEFAULT_MODEL } = defaultProviderAndModel()
+
+// ─── Initial graph ────────────────────────────────────────────────────────────
+const rootCode   = CONCENTRIC_CIRCLES
 const rootParams = extractParameters(rootCode)
 
 const initialNodes: AppNode[] = [
@@ -41,105 +50,130 @@ const initialNodes: AppNode[] = [
   },
 ]
 
-interface melanieStore {
-  // Persisted settings
-  apiKey: string
-  model: string
-  setApiKey: (k: string) => void
-  setModel:  (m: string) => void
+// ─── Parameter-drag state (shared across nodes via store) ─────────────────────
+export interface DraggingParam {
+  sourceNodeId: string
+  param: Parameter
+  sourceCode: string
+}
 
-  // ReactFlow graph state
+// ─── Store interface ──────────────────────────────────────────────────────────
+interface MelanieStore {
+  // Multi-provider auth
+  apiKeys:    Record<string, string>
+  providerId: string
+  modelId:    string
+  setApiKey:    (providerId: string, key: string) => void
+  setProvider:  (providerId: string) => void
+  setModel:     (modelId: string) => void
+  getActiveKey: () => string
+
+  // ReactFlow graph
   nodes: AppNode[]
   edges: AppEdge[]
   onNodesChange: OnNodesChange<AppNode>
   onEdgesChange: OnEdgesChange<AppEdge>
 
   // UI state
-  activeCodeNodeId: string | null
-  mergingSourceId: string | null
-  pendingOpType: 'merge' | 'diff' | null
-  setActiveCodeNodeId: (id: string | null) => void
-  setMergingSourceId: (id: string | null, opType?: 'merge' | 'diff') => void
+  activeCodeNodeId:  string | null
+  mergingSourceId:   string | null
+  pendingOpType:     'merge' | 'diff' | null
+  draggingParam:     DraggingParam | null
+  pendingToolbarOp:  OperatorType | null
+  setActiveCodeNodeId:  (id: string | null) => void
+  setMergingSourceId:   (id: string | null, opType?: 'merge' | 'diff') => void
+  setDraggingParam:     (p: DraggingParam | null) => void
+  setPendingToolbarOp:  (op: OperatorType | null) => void
 
-  // Node operations
+  // Node CRUD
   addSketchNode: (opts: {
-    code?: string
-    library?: LibraryType
-    position?: { x: number; y: number }
-    title?: string
-    sourcePrompt?: string
+    code?: string; library?: LibraryType
+    position?: { x: number; y: number }; title?: string; sourcePrompt?: string
   }) => string
 
   addOperatorNode: (opts: {
-    operatorType: OperatorType
-    sourceNodeIds: string[]
+    operatorType: OperatorType; sourceNodeIds: string[]
     position: { x: number; y: number }
   }) => string
 
   addEdge: (edge: AppEdge) => void
 
-  updateSketchCode:       (id: string, code: string) => void
-  updateSketchParameters: (id: string, params: Parameter[]) => void
+  updateSketchCode:        (id: string, code: string) => void
+  updateSketchParameters:  (id: string, params: Parameter[]) => void
+  patchSketchParameter:    (id: string, name: string, value: number) => void
   updateSketchTitle:      (id: string, title: string) => void
   updateSketchRunning:    (id: string, running: boolean) => void
   reloadSketch:           (id: string) => void
-
-  updateOperator: (id: string, data: Partial<OperatorNodeData>) => void
-
-  deleteNode: (id: string) => void
+  updateOperator:         (id: string, data: Partial<OperatorNodeData>) => void
+  deleteNode:             (id: string) => void
 
   // Helpers
-  getSketchNode: (id: string) => SketchNodeData | undefined
+  getSketchNode:   (id: string) => SketchNodeData | undefined
   nextSketchTitle: () => string
   getNodePosition: (id: string) => { x: number; y: number } | undefined
+
+  // Compat shim (old callers used apiKey / model)
+  apiKey: string
+  model:  string
 }
 
-let sketchCounter = 1
+export const useStore = create<MelanieStore>((set, get) => ({
+  // ── auth ──
+  apiKeys:    loadKeys(),
+  providerId: localStorage.getItem(STORAGE_PROVIDER) ?? DEFAULT_PROVIDER,
+  modelId:    localStorage.getItem(STORAGE_MODEL)    ?? DEFAULT_MODEL,
 
-export const useStore = create<melanieStore>((set, get) => ({
-  apiKey: localStorage.getItem(STORAGE_API_KEY) ?? '',
-  model:  localStorage.getItem(STORAGE_MODEL)   ?? DEFAULT_MODEL,
-
-  setApiKey: (k) => {
-    localStorage.setItem(STORAGE_API_KEY, k)
-    set({ apiKey: k })
+  setApiKey: (pid, key) => {
+    const next = { ...get().apiKeys, [pid]: key }
+    localStorage.setItem(STORAGE_KEYS, JSON.stringify(next))
+    set({ apiKeys: next })
   },
-  setModel: (m) => {
-    localStorage.setItem(STORAGE_MODEL, m)
-    set({ model: m })
+  setProvider: (pid) => {
+    localStorage.setItem(STORAGE_PROVIDER, pid)
+    set({ providerId: pid })
   },
+  setModel: (mid) => {
+    localStorage.setItem(STORAGE_MODEL, mid)
+    set({ modelId: mid })
+  },
+  getActiveKey: () => get().apiKeys[get().providerId] ?? '',
 
+  // ── compat shims ──
+  get apiKey() { return get().apiKeys[get().providerId] ?? '' },
+  get model()  { return get().modelId },
+
+  // ── graph ──
   nodes: initialNodes,
   edges: [],
-
   onNodesChange: (changes) =>
     set((s) => ({ nodes: applyNodeChanges(changes, s.nodes) as AppNode[] })),
   onEdgesChange: (changes) =>
     set((s) => ({ edges: applyEdgeChanges(changes, s.edges) })),
 
-  activeCodeNodeId: null,
-  mergingSourceId:  null,
-  pendingOpType:    null,
-  setActiveCodeNodeId: (id) => set({ activeCodeNodeId: id }),
-  setMergingSourceId:  (id, opType = 'merge') =>
-    set({ mergingSourceId: id, pendingOpType: id ? opType : null }),
+  // ── UI ──
+  activeCodeNodeId:  null,
+  mergingSourceId:   null,
+  pendingOpType:     null,
+  draggingParam:     null,
+  pendingToolbarOp:  null,
 
+  setActiveCodeNodeId: (id) => set({ activeCodeNodeId: id }),
+  setMergingSourceId: (id, opType = 'merge') =>
+    set({ mergingSourceId: id, pendingOpType: id ? opType : null }),
+  setDraggingParam:    (p)  => set({ draggingParam: p }),
+  setPendingToolbarOp: (op) => set({ pendingToolbarOp: op }),
+
+  // ── node CRUD ──
   addSketchNode: ({ code, library = 'p5js', position = { x: 200, y: 200 }, title, sourcePrompt }) => {
     const id = nanoid(8)
-    const resolvedCode = code ?? (library === 'p5js' ? CONCENTRIC_CIRCLES : TORUS)
-    const nodeTitle = title ?? get().nextSketchTitle()
+    const resolved = code ?? (library === 'p5js' ? CONCENTRIC_CIRCLES : TORUS)
     const newNode: AppNode = {
-      id,
-      type: 'sketch',
-      position,
+      id, type: 'sketch', position,
       data: {
-        title: nodeTitle,
-        code: resolvedCode,
-        library,
-        parameters: extractParameters(resolvedCode),
-        isRunning: true,
-        sourcePrompt,
-        generationKey: 0,
+        title: title ?? get().nextSketchTitle(),
+        code: resolved, library,
+        parameters: extractParameters(resolved),
+        isRunning: true, sourcePrompt, generationKey: 0,
       },
     }
     set((s) => ({ nodes: [...s.nodes, newNode] }))
@@ -149,16 +183,8 @@ export const useStore = create<melanieStore>((set, get) => ({
   addOperatorNode: ({ operatorType, sourceNodeIds, position }) => {
     const id = nanoid(8)
     const newNode: AppNode = {
-      id,
-      type: 'operator',
-      position,
-      data: {
-        operatorType,
-        prompt: '',
-        isGenerating: false,
-        suggestions: [],
-        sourceNodeIds,
-      },
+      id, type: 'operator', position,
+      data: { operatorType, prompt: '', isGenerating: false, suggestions: [], sourceNodeIds },
     }
     set((s) => ({ nodes: [...s.nodes, newNode] }))
     return id
@@ -178,27 +204,35 @@ export const useStore = create<melanieStore>((set, get) => ({
   updateSketchParameters: (id, params) =>
     set((s) => ({
       nodes: s.nodes.map((n) =>
-        n.id === id && n.type === 'sketch'
-          ? { ...n, data: { ...n.data, parameters: params } }
-          : n
+        n.id === id && n.type === 'sketch' ? { ...n, data: { ...n.data, parameters: params } } : n
       ),
+    })),
+
+  // Patch a single parameter value without recalculating min/max bounds.
+  // This keeps the slider range stable while the user is dragging.
+  patchSketchParameter: (id, name, value) =>
+    set((s) => ({
+      nodes: s.nodes.map((n) => {
+        if (n.id !== id || n.type !== 'sketch') return n
+        const newCode   = updateParameterInCode(n.data.code as string, name, value)
+        const newParams = (n.data.parameters as Parameter[]).map((p) =>
+          p.name === name ? { ...p, value } : p
+        )
+        return { ...n, data: { ...n.data, code: newCode, parameters: newParams } }
+      }),
     })),
 
   updateSketchTitle: (id, title) =>
     set((s) => ({
       nodes: s.nodes.map((n) =>
-        n.id === id && n.type === 'sketch'
-          ? { ...n, data: { ...n.data, title } }
-          : n
+        n.id === id && n.type === 'sketch' ? { ...n, data: { ...n.data, title } } : n
       ),
     })),
 
   updateSketchRunning: (id, isRunning) =>
     set((s) => ({
       nodes: s.nodes.map((n) =>
-        n.id === id && n.type === 'sketch'
-          ? { ...n, data: { ...n.data, isRunning } }
-          : n
+        n.id === id && n.type === 'sketch' ? { ...n, data: { ...n.data, isRunning } } : n
       ),
     })),
 
@@ -214,9 +248,7 @@ export const useStore = create<melanieStore>((set, get) => ({
   updateOperator: (id, data) =>
     set((s) => ({
       nodes: s.nodes.map((n) =>
-        n.id === id && n.type === 'operator'
-          ? { ...n, data: { ...n.data, ...data } }
-          : n
+        n.id === id && n.type === 'operator' ? { ...n, data: { ...n.data, ...data } } : n
       ),
     })),
 
@@ -233,7 +265,6 @@ export const useStore = create<melanieStore>((set, get) => ({
 
   nextSketchTitle: () => {
     const count = get().nodes.filter((n) => n.type === 'sketch').length
-    sketchCounter = count
     return `Sketch ${count}`
   },
 
