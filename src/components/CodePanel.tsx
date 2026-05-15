@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import CodeMirror from '@uiw/react-codemirror'
 import { javascript } from '@codemirror/lang-javascript'
 import { vscodeDark } from '@uiw/codemirror-theme-vscode'
+import { keymap } from '@codemirror/view'
+import { Prec } from '@codemirror/state'
 import { useStore } from '../store/store'
 
 interface Props {
@@ -10,8 +12,8 @@ interface Props {
 }
 
 export default function CodePanel({ nodeId, onClose }: Props) {
-  const data        = useStore((s) => s.getSketchNode(nodeId))
-  const updateCode  = useStore((s) => s.updateSketchCode)
+  const data         = useStore((s) => s.getSketchNode(nodeId))
+  const updateCode   = useStore((s) => s.updateSketchCode)
   const reloadSketch = useStore((s) => s.reloadSketch)
   const [localCode, setLocalCode] = useState(data?.code ?? '')
   const [dirty, setDirty] = useState(false)
@@ -21,18 +23,37 @@ export default function CodePanel({ nodeId, onClose }: Props) {
       setLocalCode(data.code)
       setDirty(false)
     }
-  }, [nodeId]) // reset when node changes
+  }, [nodeId]) // reset when switching nodes
 
   const handleChange = useCallback((value: string) => {
     setLocalCode(value)
     setDirty(true)
   }, [])
 
+  // Use a ref so the CodeMirror keybinding always calls the latest applyCode
+  // without needing to recreate the extension on every keystroke.
+  const applyCodeRef = useRef<() => void>()
+
   function applyCode() {
     updateCode(nodeId, localCode)
     reloadSketch(nodeId)
     setDirty(false)
   }
+
+  // Keep ref in sync every render
+  applyCodeRef.current = applyCode
+
+  // Stable extension: Ctrl+Enter / Cmd+Enter triggers apply from inside the editor.
+  // Created once (empty deps) — freshness is handled via the ref above.
+  const extensions = useMemo(() => [
+    javascript({ jsx: false }),
+    Prec.highest(keymap.of([{
+      key: 'Ctrl-Enter',
+      mac: 'Cmd-Enter',
+      run: () => { applyCodeRef.current?.(); return true },
+    }])),
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], [])
 
   if (!data) return null
 
@@ -58,9 +79,13 @@ export default function CodePanel({ nodeId, onClose }: Props) {
         <div className="flex items-center gap-2">
           <button
             onClick={applyCode}
-            disabled={!dirty}
-            className="px-3 py-1 rounded text-xs font-medium transition-opacity disabled:opacity-40"
-            style={{ background: '#7c3aed', color: '#fff' }}
+            className="px-3 py-1 rounded text-xs font-medium"
+            style={{
+              background: dirty ? '#7c3aed' : 'transparent',
+              color:      dirty ? '#fff'    : '#555',
+              border:     dirty ? 'none'    : '1px solid #333',
+            }}
+            title="Apply changes (Ctrl+Enter)"
           >
             Apply ↵
           </button>
@@ -93,25 +118,17 @@ export default function CodePanel({ nodeId, onClose }: Props) {
       </div>
 
       {/* Editor */}
-      <div
-        className="flex-1 overflow-auto"
-        onKeyDown={(e) => {
-          if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-            e.preventDefault()
-            applyCode()
-          }
-        }}
-      >
+      <div className="flex-1 overflow-auto">
         <CodeMirror
           value={localCode}
           onChange={handleChange}
-          extensions={[javascript({ jsx: false })]}
+          extensions={extensions}
           theme={vscodeDark}
           style={{ height: '100%', fontSize: 12 }}
           basicSetup={{
-            lineNumbers: true,
-            foldGutter: true,
-            autocompletion: true,
+            lineNumbers:        true,
+            foldGutter:         true,
+            autocompletion:     true,
             highlightActiveLine: true,
           }}
         />
