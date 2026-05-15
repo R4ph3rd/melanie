@@ -308,7 +308,7 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
               : 'rgba(124,58,237,0.08)',
             color: isParamDropTarget ? '#a78bfa' : isMergingTarget ? '#60a5fa' : '#c084fc',
           }}
-          onClick={handleNodeClick}
+          onClick={(e) => { e.stopPropagation(); handleNodeClick() }}
         >
           <div className="flex items-center gap-2 bg-black/40 px-3 py-1.5 rounded-full backdrop-blur-sm">
             {isParamDropTarget && <FontAwesomeIcon icon={faArrowRightArrowLeft} />}

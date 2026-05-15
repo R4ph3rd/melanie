@@ -291,19 +291,10 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
         )}
 
         {/* Merge info */}
-        {isMerge && !data.isGenerating && !data.prompt && (
-          <>
-            <p className="text-xs text-text-muted">
-              Merging {data.sourceNodeIds.length} sketch{data.sourceNodeIds.length !== 1 ? 'es' : ''}
-            </p>
-            <button
-              onClick={() => handleGenerate()}
-              className="w-full py-1.5 rounded text-sm font-medium flex items-center justify-center gap-2"
-              style={{ background: borderColor, color: '#fff' }}
-            >
-              <FontAwesomeIcon icon={faCodeMerge} /> Merge
-            </button>
-          </>
+        {isMerge && (
+          <p className="text-xs text-text-muted">
+            Combining {data.sourceNodeIds.length} sketch{data.sourceNodeIds.length !== 1 ? 'es' : ''} into one
+          </p>
         )}
 
         {/* Prompt textarea (modify / extract) */}
@@ -382,7 +373,7 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
             style={{ background: borderColor, color: '#fff' }}
           >
             <FontAwesomeIcon icon={faBolt} />
-            {isMerge ? 'Merge' : 'Generate'}
+            {isMerge ? 'Blend Sketches' : 'Generate'}
           </button>
         )}
         {data.isGenerating && (
