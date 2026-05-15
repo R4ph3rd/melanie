@@ -11,6 +11,10 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.3",
     "@codemirror/lang-javascript": "^6.2.2",
+    "@fortawesome/fontawesome-svg-core": "^7.2.0",
+    "@fortawesome/free-brands-svg-icons": "^7.2.0",
+    "@fortawesome/free-solid-svg-icons": "^7.2.0",
+    "@fortawesome/react-fontawesome": "^3.3.1",
     "@uiw/codemirror-theme-vscode": "^4.23.6",
     "@uiw/react-codemirror": "^4.23.6",
     "@xyflow/react": "^12.3.6",
