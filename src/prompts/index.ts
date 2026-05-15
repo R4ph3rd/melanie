@@ -120,6 +120,66 @@ export function buildAutocompleteMessages(
   ]
 }
 
+// ─── Semantic label enrichment ────────────────────────────────────────────────
+
+export function getSemanticLabelSystem(): string {
+  return `You map creative coding variable names to short semantic labels that describe their visual effect.
+Given a list of variable names and the sketch's source prompt, return a JSON object mapping each variable name to a concise label (2-5 words) describing what adjusting it changes visually.
+Examples: {"circleSize": "ring diameter", "numRings": "number of rings", "bgBrightness": "background glow", "strokeW": "outline thickness"}
+Respond ONLY with valid JSON — no markdown, no explanation, no extra keys.`
+}
+
+export function buildSemanticLabelMessages(
+  varNames: string[],
+  sourcePrompt: string,
+  codeExcerpt: string,
+): { role: 'user' | 'assistant'; content: string }[] {
+  return [
+    {
+      role: 'user' as const,
+      content: `Sketch prompt: "${sourcePrompt}"
+
+Variable names: ${JSON.stringify(varNames)}
+
+Code excerpt:
+${codeExcerpt.slice(0, 500)}
+
+Return a JSON object mapping each variable name to a short semantic label describing its visual effect.`,
+    },
+  ]
+}
+
+// ─── Param-transfer operator ──────────────────────────────────────────────────
+
+export function buildParamTransferMessages(
+  targetCode: string,
+  paramName: string,
+  paramLabel: string,
+  paramValue: number,
+  sourceCode: string,
+  library: LibraryType,
+): { role: 'user' | 'assistant'; content: string }[] {
+  const libName = library === 'p5js' ? 'p5.js' : 'three.js'
+  return [
+    {
+      role: 'user' as const,
+      content: `Here is the target ${libName} sketch:
+
+${targetCode}
+
+From another sketch, the user wants to incorporate this parameter:
+- Variable name: ${paramName}
+- Semantic meaning: "${paramLabel}"
+- Current value: ${paramValue}
+
+Source sketch (for context on how the parameter is used):
+${sourceCode.slice(0, 600)}
+
+Modify the target sketch to incorporate this concept meaningfully. The parameter should control something visually equivalent or complementary. Declare the variable at the top and use it appropriately.`,
+    },
+  ]
+}
+
 export function getSystemForOperator(op: OperatorType, library: LibraryType): string {
   switch (op) {
     case 'modify':    return getModifySystem(library)
