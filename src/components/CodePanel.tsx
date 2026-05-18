@@ -4,7 +4,10 @@ import { javascript } from '@codemirror/lang-javascript'
 import { vscodeDark } from '@uiw/codemirror-theme-vscode'
 import { keymap } from '@codemirror/view'
 import { Prec } from '@codemirror/state'
+import { X } from 'lucide-react'
 import { useStore } from '../store/store'
+import { Button } from './ui/button'
+import { Badge } from './ui/badge'
 
 interface Props {
   nodeId: string
@@ -68,51 +71,44 @@ export default function CodePanel({ nodeId, onClose }: Props) {
         style={{ borderBottom: '1px solid #2a2a3a', background: '#111118' }}
       >
         <div className="flex items-center gap-2">
-          <span className="text-text-muted text-xs font-mono">{'</>'}</span>
-          <span className="text-sm font-medium text-text-primary">{data.title}</span>
+          <span className="text-muted-foreground text-xs font-mono">{'</>'}</span>
+          <span className="text-sm font-medium text-foreground">{data.title}</span>
           {dirty && (
-            <span className="text-2xs px-1.5 py-0.5 rounded bg-surface3 text-warning">
+            <Badge variant="outline" className="text-warning border-warning/30 text-[10px]">
               unsaved
-            </span>
+            </Badge>
           )}
         </div>
         <div className="flex items-center gap-2">
-          <button
+          <Button
             onClick={applyCode}
-            className="px-3 py-1 rounded text-xs font-medium"
-            style={{
-              background: dirty ? '#7c3aed' : 'transparent',
-              color:      dirty ? '#fff'    : '#555',
-              border:     dirty ? 'none'    : '1px solid #333',
-            }}
+            variant={dirty ? 'default' : 'ghost'}
+            size="sm"
+            className={dirty ? '' : 'text-muted-foreground border border-border'}
             title="Apply changes (Ctrl+Enter)"
           >
             Apply ↵
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={onClose}
-            className="text-text-muted hover:text-text-primary text-sm w-6 h-6 flex items-center justify-center rounded hover:bg-surface3"
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 text-muted-foreground hover:text-foreground"
           >
-            ✕
-          </button>
+            <X className="h-3.5 w-3.5" />
+          </Button>
         </div>
       </div>
 
       {/* Library badge */}
       <div className="px-4 py-1.5 flex items-center gap-2 flex-shrink-0" style={{ borderBottom: '1px solid #1e1e2a' }}>
-        <span
-          className="text-2xs px-2 py-0.5 rounded"
-          style={{
-            background: data.library === 'p5js' ? '#1a2a1a' : '#1a1a2e',
-            color: data.library === 'p5js' ? '#4ade80' : '#60a5fa',
-          }}
-        >
+        <Badge variant={data.library === 'p5js' ? 'p5' : 'threejs'}>
           {data.library === 'p5js' ? 'p5.js' : 'three.js'}
-        </span>
-        <span className="text-2xs text-text-muted font-mono">
+        </Badge>
+        <span className="text-2xs text-muted-foreground font-mono">
           {localCode.split('\n').length} lines
         </span>
-        <span className="text-2xs text-text-muted">
+        <span className="text-2xs text-muted-foreground">
           Ctrl+Enter to apply
         </span>
       </div>

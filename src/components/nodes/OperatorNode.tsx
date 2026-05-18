@@ -31,6 +31,8 @@ import {
   buildParamTransferMessages,
 } from '../../prompts'
 import { extractParameters, applySemanticLabels } from '../../utils/codeUtils'
+import { Button } from '../ui/button'
+import { Textarea } from '../ui/textarea'
 
 type OperatorNodeType = Node<OperatorNodeData, 'operator'>
 
@@ -255,7 +257,7 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
         </span>
         <div className="flex items-center gap-1.5">
           {data.isGenerating && (
-            <span className="text-xs text-text-muted animate-pulse">generating…</span>
+            <span className="text-xs text-muted-foreground animate-pulse">generating…</span>
           )}
           {data.paramTransferLabel && (
             <span
@@ -266,12 +268,14 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
               ⇄ {data.paramTransferLabel}
             </span>
           )}
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => store.deleteNode(id)}
-            className="text-text-muted hover:text-error text-xs w-5 h-5 flex items-center justify-center"
+            className="h-5 w-5 text-muted-foreground hover:text-error"
           >
             <FontAwesomeIcon icon={faXmark} />
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -281,18 +285,18 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
           <p className="text-xs text-text-secondary leading-relaxed">{data.diffText}</p>
         )}
         {isDiff && !data.diffText && !data.isGenerating && (
-          <button
+          <Button
             onClick={() => handleGenerate()}
-            className="w-full py-1.5 rounded text-sm font-medium flex items-center justify-center gap-2"
+            className="w-full flex items-center justify-center gap-2"
             style={{ background: borderColor, color: '#fff' }}
           >
             <FontAwesomeIcon icon={faCodeBranch} /> Compare
-          </button>
+          </Button>
         )}
 
         {/* Merge info */}
         {isMerge && (
-          <p className="text-xs text-text-muted">
+          <p className="text-xs text-muted-foreground">
             Combining {data.sourceNodeIds.length} sketch{data.sourceNodeIds.length !== 1 ? 'es' : ''} into one
           </p>
         )}
@@ -300,7 +304,7 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
         {/* Prompt textarea (modify / extract) */}
         {needsPrompt && (
           <div className="relative">
-            <textarea
+            <Textarea
               value={prompt}
               onChange={(e) => handlePromptChange(e.target.value)}
               placeholder={
@@ -311,10 +315,8 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
                   : 'Describe the modification…'
               }
               rows={3}
-              className="w-full resize-none rounded px-2 py-1.5 text-xs text-text-primary placeholder-text-muted outline-none nodrag"
+              className="nodrag"
               style={{
-                background:  '#0d0d1a',
-                border:      '1px solid #333',
                 lineHeight:  '1.5',
                 fontFamily:  'Inter, sans-serif',
               }}
@@ -366,15 +368,15 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
 
         {/* Generate / loading */}
         {(needsPrompt || isMerge) && !data.isGenerating && (
-          <button
+          <Button
             onClick={() => handleGenerate()}
             disabled={needsPrompt && !prompt.trim()}
-            className="w-full py-1.5 rounded text-sm font-medium transition-opacity disabled:opacity-40 flex items-center justify-center gap-2"
+            className="w-full flex items-center justify-center gap-2"
             style={{ background: borderColor, color: '#fff' }}
           >
             <FontAwesomeIcon icon={faBolt} />
             {isMerge ? 'Blend Sketches' : 'Generate'}
-          </button>
+          </Button>
         )}
         {data.isGenerating && (
           <div className="flex items-center justify-center gap-2 py-1.5">
@@ -383,7 +385,7 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
               className="animate-pulse"
               style={{ color: borderColor }}
             />
-            <span className="text-xs text-text-muted">Generating…</span>
+            <span className="text-xs text-muted-foreground">Generating…</span>
           </div>
         )}
       </div>

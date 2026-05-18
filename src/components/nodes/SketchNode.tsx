@@ -11,6 +11,8 @@ import type { SketchNodeData, OperatorType } from '../../utils/types'
 import { useStore } from '../../store/store'
 import SketchPreview from '../SketchPreview'
 import ParameterSliders from '../ParameterSliders'
+import { Button } from '../ui/button'
+import { Badge } from '../ui/badge'
 
 type SketchNodeType = Node<SketchNodeData, 'sketch'>
 
@@ -221,22 +223,18 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
           </span>
         )}
         <div className="flex items-center gap-1">
-          <span
-            className="text-2xs px-1.5 py-0.5 rounded"
-            style={{
-              background: data.library === 'p5js' ? '#1a2a1a' : '#1a1a2e',
-              color:      data.library === 'p5js' ? '#4ade80' : '#60a5fa',
-            }}
-          >
+          <Badge variant={data.library === 'p5js' ? 'p5' : 'threejs'} className="rounded">
             {data.library === 'p5js' ? 'p5' : '3js'}
-          </span>
-          <button
+          </Badge>
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={(e) => { e.stopPropagation(); store.deleteNode(id) }}
-            className="text-text-muted hover:text-error text-xs w-5 h-5 flex items-center justify-center rounded hover:bg-surface3"
+            className="h-5 w-5 text-muted-foreground hover:text-error"
             title="Delete node"
           >
             <FontAwesomeIcon icon={faXmark} />
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -263,23 +261,29 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
 
       {/* Controls */}
       <div className="flex items-center gap-1 px-3 pb-2" onClick={(e) => e.stopPropagation()}>
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={() => store.updateSketchRunning(id, !data.isRunning)}
-          className="flex items-center gap-1 px-2 py-1 rounded text-xs text-text-secondary hover:text-text-primary hover:bg-surface3"
+          className="text-text-secondary hover:text-text-primary px-2"
           title={data.isRunning ? 'Pause' : 'Play'}
         >
           <FontAwesomeIcon icon={data.isRunning ? faPause : faPlay} />
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={() => store.reloadSketch(id)}
-          className="flex items-center gap-1 px-2 py-1 rounded text-xs text-text-secondary hover:text-text-primary hover:bg-surface3"
+          className="text-text-secondary hover:text-text-primary px-2"
           title="Reload"
         >
           <FontAwesomeIcon icon={faRotateRight} />
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={() => store.setActiveCodeNodeId(store.activeCodeNodeId === id ? null : id)}
-          className="flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-colors"
+          className="px-2 flex items-center gap-1.5"
           style={{
             color:      store.activeCodeNodeId === id ? '#7c3aed' : '#a0a0a0',
             background: store.activeCodeNodeId === id ? 'rgba(124,58,237,0.15)' : 'transparent',
@@ -288,7 +292,7 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
         >
           <FontAwesomeIcon icon={faCode} />
           {store.activeCodeNodeId === id ? 'Hide Code' : 'Code'}
-        </button>
+        </Button>
       </div>
 
       {/* Parameter sliders */}
