@@ -5,6 +5,7 @@ import Canvas from './components/Canvas'
 import ExamplesPanel from './components/ExamplesPanel'
 import CodePanel from './components/CodePanel'
 import { ReactFlowProvider } from '@xyflow/react'
+import { TooltipProvider } from './components/ui/tooltip'
 
 const EXAMPLES_W   = 200
 const CODE_W_MIN   = 200
@@ -53,6 +54,7 @@ export default function App() {
   }, [])
 
   return (
+    <TooltipProvider delayDuration={400}>
     <div className="flex flex-col" style={{ height: '100vh', width: '100vw', overflow: 'hidden' }}>
       {/* Top bar */}
       <div className="relative flex-shrink-0">
@@ -121,5 +123,6 @@ export default function App() {
         </div>
       </div>
     </div>
+    </TooltipProvider>
   )
 }
