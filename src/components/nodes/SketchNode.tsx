@@ -1,9 +1,9 @@
 import { memo, useState, useCallback } from 'react'
-import { Handle, Position, type NodeProps, type Node } from '@xyflow/react'
+import { Handle, Position, type NodeProps, type Node, useReactFlow } from '@xyflow/react'
 import { nanoid } from 'nanoid'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
-  faPlay, faPause, faRotateRight, faCode, faXmark,
+  faPlay, faPause, faRotateRight, faCode, faXmark, faExpand,
   faMagicWandSparkles, faClone, faCodeMerge, faCodeBranch, faScissors,
   faArrowRightArrowLeft,
 } from '@fortawesome/free-solid-svg-icons'
@@ -22,6 +22,12 @@ const PREVIEW_H = 200
 const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<SketchNodeType>) {
   const [editingTitle, setEditingTitle] = useState(false)
   const store = useStore()
+  const { fitView } = useReactFlow()
+
+  const handleMaximize = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    fitView({ nodes: [{ id }], padding: 0.35, duration: 400 })
+  }, [id, fitView])
 
   // ─── Toolbar-op click handler ──────────────────────────────────────────────
   // When a toolbar op is pending, clicking this sketch applies it.
@@ -292,6 +298,15 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
         >
           <FontAwesomeIcon icon={faCode} />
           {store.activeCodeNodeId === id ? 'Hide Code' : 'Code'}
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleMaximize}
+          className="ml-auto text-text-secondary hover:text-text-primary px-2"
+          title="Zoom to fit this node"
+        >
+          <FontAwesomeIcon icon={faExpand} />
         </Button>
       </div>
 

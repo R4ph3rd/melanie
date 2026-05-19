@@ -12,6 +12,8 @@ import {
   faCodeMerge,
   faCodeBranch,
   faScissors,
+  faPlus,
+  faTrashCan,
 } from '@fortawesome/free-solid-svg-icons'
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
 import type { OperatorType } from '../utils/types'
@@ -34,9 +36,11 @@ const OPS: OpEntry[] = [
 ]
 
 export default function OpsToolbar() {
-  const pendingToolbarOp  = useStore((s) => s.pendingToolbarOp)
+  const pendingToolbarOp    = useStore((s) => s.pendingToolbarOp)
   const setPendingToolbarOp = useStore((s) => s.setPendingToolbarOp)
-  const mergingSourceId   = useStore((s) => s.mergingSourceId)
+  const mergingSourceId     = useStore((s) => s.mergingSourceId)
+  const addSketchNode       = useStore((s) => s.addSketchNode)
+  const resetCanvas         = useStore((s) => s.resetCanvas)
 
   function handleClick(op: OperatorType) {
     // Toggle off if already active
@@ -87,6 +91,31 @@ export default function OpsToolbar() {
             × cancel
           </button>
         )}
+
+        {/* ── Canvas actions ── */}
+        <div className="mt-1 pt-1" style={{ borderTop: '1px solid #2a2a3a' }}>
+          <button
+            onClick={() => addSketchNode({ library: 'p5js', position: { x: 300 + Math.random() * 200, y: 200 + Math.random() * 200 } })}
+            title="Add a blank sketch to the canvas"
+            className="flex items-center gap-2 px-2.5 py-1.5 rounded text-xs w-full nodrag transition-colors hover:bg-surface3"
+            style={{ color: '#4ade80', minWidth: 110 }}
+          >
+            <FontAwesomeIcon icon={faPlus} className="w-3 h-3 flex-shrink-0" />
+            <span style={{ color: '#888' }}>New Sketch</span>
+          </button>
+          <button
+            onClick={() => {
+              if (window.confirm('Reset canvas? All nodes and edges will be removed.'))
+                resetCanvas()
+            }}
+            title="Clear the canvas and start fresh"
+            className="flex items-center gap-2 px-2.5 py-1.5 rounded text-xs w-full nodrag transition-colors hover:bg-surface3"
+            style={{ color: '#f87171', minWidth: 110 }}
+          >
+            <FontAwesomeIcon icon={faTrashCan} className="w-3 h-3 flex-shrink-0" />
+            <span style={{ color: '#888' }}>Reset Canvas</span>
+          </button>
+        </div>
       </div>
     </Panel>
   )

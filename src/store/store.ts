@@ -112,6 +112,9 @@ interface MelanieStore {
   nextSketchTitle: () => string
   getNodePosition: (id: string) => { x: number; y: number } | undefined
 
+  // Canvas-level actions
+  resetCanvas: () => void
+
   // Compat shim (old callers used apiKey / model)
   apiKey: string
   model:  string
@@ -269,4 +272,23 @@ export const useStore = create<MelanieStore>((set, get) => ({
   },
 
   getNodePosition: (id) => get().nodes.find((n) => n.id === id)?.position,
+
+  resetCanvas: () => {
+    const code = CONCENTRIC_CIRCLES
+    set({
+      nodes: [{
+        id: nanoid(8), type: 'sketch', position: { x: 200, y: 200 },
+        data: {
+          title: 'Sketch 0', code, library: 'p5js',
+          parameters: extractParameters(code), isRunning: true, generationKey: 0,
+        },
+      }],
+      edges: [],
+      activeCodeNodeId: null,
+      mergingSourceId:  null,
+      pendingOpType:    null,
+      draggingParam:    null,
+      pendingToolbarOp: null,
+    })
+  },
 }))

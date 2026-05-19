@@ -59,10 +59,27 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
   const [streamingCode,   setStreamingCode]   = useState('')
   const autocompleteTimer = useRef<ReturnType<typeof setTimeout>>()
   const hasAutoFired      = useRef(false)
+  const cascadeTimer      = useRef<ReturnType<typeof setTimeout>>()
+  const prevSrc1Code      = useRef<string | null>(null)
+  const prevSrc2Code      = useRef<string | null>(null)
+  // Ref so cascade effect can call the latest handleGenerate without being in its deps
+  const handleGenerateRef = useRef<(promptOverride?: string) => Promise<void>>()
 
   const isDiff      = data.operatorType === 'diff'
   const isMerge     = data.operatorType === 'merge'
   const needsPrompt = data.operatorType === 'modify' || data.operatorType === 'extract'
+
+  // Subscribe to source node codes for cascade detection
+  const src1Code = useStore((s) => {
+    const n = s.nodes.find((node) => node.id === data.sourceNodeIds[0])
+    return n?.type === 'sketch' ? (n.data.code as string) : ''
+  })
+  const src2Code = useStore((s) => {
+    const nid = data.sourceNodeIds[1]
+    if (!nid) return ''
+    const n = s.nodes.find((node) => node.id === nid)
+    return n?.type === 'sketch' ? (n.data.code as string) : ''
+  })
 
   // ── Semantic label enrichment ──────────────────────────────────────────────
   async function enrichSemanticLabels(generatedCode: string, targetId: string) {
@@ -189,6 +206,41 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Keep ref in sync so the cascade effect can call the latest handleGenerate
+  handleGenerateRef.current = handleGenerate
+
+  // ── Cascade re-generation ──────────────────────────────────────────────────
+  // When a source sketch's code changes (e.g. user edits it or an upstream
+  // operator updates it), automatically re-run this operator after a short
+  // debounce — mirroring the Spellburst paper's cascade feature.
+  useEffect(() => {
+    // First render: record baseline codes, don't cascade
+    if (prevSrc1Code.current === null) {
+      prevSrc1Code.current = src1Code
+      prevSrc2Code.current = src2Code
+      return
+    }
+
+    const src1Changed = src1Code !== prevSrc1Code.current
+    const src2Changed = src2Code !== prevSrc2Code.current
+    prevSrc1Code.current = src1Code
+    prevSrc2Code.current = src2Code
+
+    if (!src1Changed && !src2Changed) return
+
+    // Only cascade if this operator has already produced output
+    const targetData = data.targetNodeId ? store.getSketchNode(data.targetNodeId) : null
+    const hasOutput  = (targetData?.code?.length ?? 0) > 0 || (isDiff && !!data.diffText)
+    if (!hasOutput || data.isGenerating) return
+
+    // Debounce — wait for the user to finish typing before re-generating
+    clearTimeout(cascadeTimer.current)
+    cascadeTimer.current = setTimeout(() => {
+      handleGenerateRef.current?.()
+    }, 1500)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [src1Code, src2Code])
 
   // ── Autocomplete ──────────────────────────────────────────────────────────
   const fetchSuggestions = useCallback(
