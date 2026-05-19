@@ -10,7 +10,7 @@
  *    gray line (background style, not an arrow).
  *  • OpsToolbar panel (top-left) and a merge-mode toast are rendered here.
  */
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ReactFlow,
   Background,
@@ -39,6 +39,7 @@ import { useStore } from '../store/store'
 import SketchNode from './nodes/SketchNode'
 import OperatorNode from './nodes/OperatorNode'
 import OpsToolbar from './OpsToolbar'
+import SketchPreview from './SketchPreview'
 import type { OperatorType } from '../utils/types'
 
 // ─── Node types ───────────────────────────────────────────────────────────────
@@ -280,14 +281,50 @@ export default function Canvas() {
     [edges],
   )
 
-  const mergingId     = store.mergingSourceId
-  const pendingOpType = store.pendingOpType
+  const mergingId         = store.mergingSourceId
+  const pendingOpType     = store.pendingOpType
+  const backgroundSketchId = store.backgroundSketchId
+  const backgroundSketch  = backgroundSketchId
+    ? nodes.find((n) => n.id === backgroundSketchId && n.type === 'sketch')
+    : null
+  const backgroundData    = backgroundSketch?.type === 'sketch' ? backgroundSketch.data : null
+
+  // Track viewport size so the background iframe fills it.
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const [viewportSize, setViewportSize] = useState({ w: 0, h: 0 })
+  useEffect(() => {
+    const update = () => {
+      const r = wrapperRef.current?.getBoundingClientRect()
+      if (r) setViewportSize({ w: Math.ceil(r.width), h: Math.ceil(r.height) })
+    }
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
 
   return (
     <div
+      ref={wrapperRef}
       className="relative w-full h-full"
       onPointerMove={handlePointerMove}
     >
+      {/* Background sketch — fills the whole canvas, sits behind ReactFlow */}
+      {backgroundData && viewportSize.w > 0 && (
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ zIndex: 0, opacity: 0.55 }}
+        >
+          <SketchPreview
+            code={backgroundData.code as string}
+            library={backgroundData.library as 'p5js' | 'threejs'}
+            isRunning={backgroundData.isRunning as boolean}
+            generationKey={(backgroundData.generationKey as number) ?? 0}
+            width={viewportSize.w}
+            height={viewportSize.h}
+          />
+        </div>
+      )}
+
       {/* Merge/toolbar-op mode toast */}
       {(mergingId || store.pendingToolbarOp) && (
         <div
@@ -324,10 +361,12 @@ export default function Canvas() {
         minZoom={0.1}
         maxZoom={2}
         proOptions={{ hideAttribution: true }}
-        style={{ background: '#080808' }}
+        style={{ background: backgroundData ? 'transparent' : '#080808' }}
         deleteKeyCode="Delete"
       >
-        <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="#1e1e2e" />
+        {!backgroundData && (
+          <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="#1e1e2e" />
+        )}
         <Controls style={{ background: '#111118', border: '1px solid #2a2a3a', borderRadius: 8 }} />
         <MiniMap
           style={{ background: '#0e0e16', border: '1px solid #2a2a3a' }}

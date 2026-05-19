@@ -75,15 +75,17 @@ interface MelanieStore {
   onEdgesChange: OnEdgesChange<AppEdge>
 
   // UI state
-  activeCodeNodeId:  string | null
-  mergingSourceId:   string | null
-  pendingOpType:     'merge' | 'diff' | null
-  draggingParam:     DraggingParam | null
-  pendingToolbarOp:  OperatorType | null
-  setActiveCodeNodeId:  (id: string | null) => void
-  setMergingSourceId:   (id: string | null, opType?: 'merge' | 'diff') => void
-  setDraggingParam:     (p: DraggingParam | null) => void
-  setPendingToolbarOp:  (op: OperatorType | null) => void
+  activeCodeNodeId:    string | null
+  mergingSourceId:     string | null
+  pendingOpType:       'merge' | 'diff' | null
+  draggingParam:       DraggingParam | null
+  pendingToolbarOp:    OperatorType | null
+  backgroundSketchId:  string | null   // sketch shown behind the whole canvas
+  setActiveCodeNodeId:   (id: string | null) => void
+  setMergingSourceId:    (id: string | null, opType?: 'merge' | 'diff') => void
+  setDraggingParam:      (p: DraggingParam | null) => void
+  setPendingToolbarOp:   (op: OperatorType | null) => void
+  setBackgroundSketchId: (id: string | null) => void
 
   // Node CRUD
   addSketchNode: (opts: {
@@ -103,6 +105,7 @@ interface MelanieStore {
   patchSketchParameter:    (id: string, name: string, value: number) => void
   updateSketchTitle:      (id: string, title: string) => void
   updateSketchRunning:    (id: string, running: boolean) => void
+  updateSketchDims:       (id: string, width: number, height: number) => void
   reloadSketch:           (id: string) => void
   updateOperator:         (id: string, data: Partial<OperatorNodeData>) => void
   deleteNode:             (id: string) => void
@@ -154,17 +157,19 @@ export const useStore = create<MelanieStore>((set, get) => ({
     set((s) => ({ edges: applyEdgeChanges(changes, s.edges) })),
 
   // ── UI ──
-  activeCodeNodeId:  null,
-  mergingSourceId:   null,
-  pendingOpType:     null,
-  draggingParam:     null,
-  pendingToolbarOp:  null,
+  activeCodeNodeId:   null,
+  mergingSourceId:    null,
+  pendingOpType:      null,
+  draggingParam:      null,
+  pendingToolbarOp:   null,
+  backgroundSketchId: null,
 
   setActiveCodeNodeId: (id) => set({ activeCodeNodeId: id }),
   setMergingSourceId: (id, opType = 'merge') =>
     set({ mergingSourceId: id, pendingOpType: id ? opType : null }),
-  setDraggingParam:    (p)  => set({ draggingParam: p }),
-  setPendingToolbarOp: (op) => set({ pendingToolbarOp: op }),
+  setDraggingParam:      (p)  => set({ draggingParam: p }),
+  setPendingToolbarOp:   (op) => set({ pendingToolbarOp: op }),
+  setBackgroundSketchId: (id) => set({ backgroundSketchId: id }),
 
   // ── node CRUD ──
   addSketchNode: ({ code, library = 'p5js', position = { x: 200, y: 200 }, title, sourcePrompt }) => {
@@ -239,6 +244,13 @@ export const useStore = create<MelanieStore>((set, get) => ({
       ),
     })),
 
+  updateSketchDims: (id, width, height) =>
+    set((s) => ({
+      nodes: s.nodes.map((n) =>
+        n.id === id && n.type === 'sketch' ? { ...n, data: { ...n.data, width, height } } : n
+      ),
+    })),
+
   reloadSketch: (id) =>
     set((s) => ({
       nodes: s.nodes.map((n) =>
@@ -259,6 +271,7 @@ export const useStore = create<MelanieStore>((set, get) => ({
     set((s) => ({
       nodes: s.nodes.filter((n) => n.id !== id),
       edges: s.edges.filter((e) => e.source !== id && e.target !== id),
+      backgroundSketchId: s.backgroundSketchId === id ? null : s.backgroundSketchId,
     })),
 
   getSketchNode: (id) => {
@@ -284,11 +297,12 @@ export const useStore = create<MelanieStore>((set, get) => ({
         },
       }],
       edges: [],
-      activeCodeNodeId: null,
-      mergingSourceId:  null,
-      pendingOpType:    null,
-      draggingParam:    null,
-      pendingToolbarOp: null,
+      activeCodeNodeId:   null,
+      mergingSourceId:    null,
+      pendingOpType:      null,
+      draggingParam:      null,
+      pendingToolbarOp:   null,
+      backgroundSketchId: null,
     })
   },
 }))

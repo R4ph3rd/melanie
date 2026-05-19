@@ -22,6 +22,9 @@ export interface SketchNodeData extends Record<string, unknown> {
   sourcePrompt?: string
   error?: string
   generationKey: number
+  // Optional persisted node dimensions (controlled by NodeResizer)
+  width?:  number
+  height?: number
 }
 
 export interface OperatorNodeData extends Record<string, unknown> {

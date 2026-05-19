@@ -1,14 +1,15 @@
 import { memo, useState, useCallback } from 'react'
-import { Handle, Position, type NodeProps, type Node, useReactFlow } from '@xyflow/react'
+import { Handle, Position, NodeResizer, type NodeProps, type Node, useReactFlow } from '@xyflow/react'
 import { nanoid } from 'nanoid'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faPlay, faPause, faRotateRight, faCode, faXmark, faExpand,
   faMagicWandSparkles, faClone, faCodeMerge, faCodeBranch, faScissors,
-  faArrowRightArrowLeft,
+  faArrowRightArrowLeft, faImage, faUpRightFromSquare,
 } from '@fortawesome/free-solid-svg-icons'
 import type { SketchNodeData, OperatorType } from '../../utils/types'
 import { useStore } from '../../store/store'
+import { buildIframeSrcdoc } from '../../utils/codeUtils'
 import SketchPreview from '../SketchPreview'
 import ParameterSliders from '../ParameterSliders'
 import { Button } from '../ui/button'
@@ -24,10 +25,39 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
   const store = useStore()
   const { fitView } = useReactFlow()
 
+  // ─── Node dimensions (controlled by NodeResizer) ──────────────────────────
+  // PREVIEW_W/H are the defaults for new nodes. Once resized, the user-chosen
+  // size is persisted on data.width/height.
+  const previewW = (data.width  ?? PREVIEW_W + 20) - 20  // node total minus side padding
+  const previewH = (data.height ?? PREVIEW_H)
+
   const handleMaximize = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
     fitView({ nodes: [{ id }], padding: 0.35, duration: 400 })
   }, [id, fitView])
+
+  // ─── Background sketch toggle ─────────────────────────────────────────────
+  const isBackground = store.backgroundSketchId === id
+  const handleToggleBackground = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    store.setBackgroundSketchId(isBackground ? null : id)
+  }, [id, isBackground, store])
+
+  // ─── Open sketch in a new browser window ──────────────────────────────────
+  const handleOpenInWindow = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    const html = buildIframeSrcdoc(data.code, data.library)
+    const blob = new Blob([html], { type: 'text/html' })
+    const url  = URL.createObjectURL(blob)
+    const w = window.open(url, '_blank', 'width=900,height=700,toolbar=no,menubar=no')
+    if (!w) {
+      alert('Popup blocked — please allow popups for this site.')
+      URL.revokeObjectURL(url)
+      return
+    }
+    // Revoke the blob URL after the new window has loaded its content
+    setTimeout(() => URL.revokeObjectURL(url), 30_000)
+  }, [data.code, data.library])
 
   // ─── Toolbar-op click handler ──────────────────────────────────────────────
   // When a toolbar op is pending, clicking this sketch applies it.
@@ -199,10 +229,26 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
           ? '0 0 0 3px rgba(124,58,237,0.2), 0 4px 24px rgba(0,0,0,0.6)'
           : '0 4px 24px rgba(0,0,0,0.5)',
         minWidth: PREVIEW_W + 20,
-        cursor: isInteractiveTarget ? 'crosshair' : 'default',
+        width:    data.width,   // controlled by NodeResizer when set
+        cursor:   isInteractiveTarget ? 'crosshair' : 'default',
       }}
       onClick={handleNodeClick}
     >
+      {/* Resize handles — visible on selection */}
+      <NodeResizer
+        isVisible={selected}
+        minWidth={PREVIEW_W + 20}
+        minHeight={PREVIEW_H + 80}
+        color="#7c3aed"
+        handleStyle={{ width: 8, height: 8, borderRadius: 2 }}
+        lineStyle={{ borderColor: 'rgba(124,58,237,0.4)' }}
+        onResize={(_, p) => {
+          // Live update so the preview tracks the cursor; the
+          // store re-render is cheap and only updates one node.
+          store.updateSketchDims(id, p.width, p.height - 80)
+        }}
+      />
+
       {/* Handles */}
       <Handle type="target" position={Position.Left}  id="left"  style={{ background: '#7c3aed', width: 10, height: 10 }} />
       <Handle type="source" position={Position.Right} id="right" style={{ background: '#7c3aed', width: 10, height: 10 }} />
@@ -245,20 +291,20 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
       </div>
 
       {/* Preview */}
-      <div className="relative" style={{ width: PREVIEW_W + 20, height: PREVIEW_H + 10, padding: '5px 10px' }}>
+      <div className="relative" style={{ width: previewW + 20, height: previewH + 10, padding: '5px 10px' }}>
         {data.code ? (
           <SketchPreview
             code={data.code}
             library={data.library}
             isRunning={data.isRunning}
             generationKey={data.generationKey}
-            width={PREVIEW_W}
-            height={PREVIEW_H}
+            width={previewW}
+            height={previewH}
           />
         ) : (
           <div
             className="flex items-center justify-center text-text-muted text-sm"
-            style={{ width: PREVIEW_W, height: PREVIEW_H, background: '#0d0d15', borderRadius: 4 }}
+            style={{ width: previewW, height: previewH, background: '#0d0d15', borderRadius: 4 }}
           >
             <span className="animate-pulse">Waiting for generation…</span>
           </div>
@@ -298,6 +344,28 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
         >
           <FontAwesomeIcon icon={faCode} />
           {store.activeCodeNodeId === id ? 'Hide Code' : 'Code'}
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleToggleBackground}
+          className="px-2"
+          style={{
+            color:      isBackground ? '#7c3aed' : '#a0a0a0',
+            background: isBackground ? 'rgba(124,58,237,0.15)' : 'transparent',
+          }}
+          title={isBackground ? 'Stop drawing this sketch behind the canvas' : 'Draw this sketch behind the canvas'}
+        >
+          <FontAwesomeIcon icon={faImage} />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleOpenInWindow}
+          className="text-text-secondary hover:text-text-primary px-2"
+          title="Open sketch in new window"
+        >
+          <FontAwesomeIcon icon={faUpRightFromSquare} />
         </Button>
         <Button
           variant="ghost"
