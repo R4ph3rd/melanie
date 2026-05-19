@@ -32,7 +32,6 @@ import {
 } from '../../prompts'
 import { extractParameters, applySemanticLabels } from '../../utils/codeUtils'
 import { Button } from '../ui/button'
-import { Textarea } from '../ui/textarea'
 
 type OperatorNodeType = Node<OperatorNodeData, 'operator'>
 
@@ -304,7 +303,7 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
         {/* Prompt textarea (modify / extract) */}
         {needsPrompt && (
           <div className="relative">
-            <Textarea
+            <textarea
               value={prompt}
               onChange={(e) => handlePromptChange(e.target.value)}
               placeholder={
@@ -315,15 +314,10 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
                   : 'Describe the modification…'
               }
               rows={3}
-              className="nodrag"
-              style={{
-                lineHeight:  '1.5',
-                fontFamily:  'Inter, sans-serif',
-              }}
+              className="nodrag flex min-h-[60px] w-full rounded-md border border-border bg-input px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+              style={{ lineHeight: '1.5', fontFamily: 'Inter, sans-serif' }}
               onFocus={() => setShowSuggestions(suggestions.length > 0)}
               onBlur={() => {
-                // Close after a short delay — gives onMouseDown on suggestion
-                // buttons time to fire before focus moves away.
                 setTimeout(() => setShowSuggestions(false), 150)
               }}
             />

@@ -2,11 +2,8 @@ import { useState } from 'react'
 import { EXAMPLE_SKETCHES } from '../utils/templates'
 import { useStore } from '../store/store'
 import SketchPreview from './SketchPreview'
-import { Input } from './ui/input'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
-import { ScrollArea } from './ui/scroll-area'
-import { Separator } from './ui/separator'
 
 export default function ExamplesPanel() {
   const store    = useStore()
@@ -19,15 +16,9 @@ export default function ExamplesPanel() {
   )
 
   function addToCanvas(sketch: typeof EXAMPLE_SKETCHES[0]) {
-    // Place at a slightly random offset from current visible area centre
     const x = 200 + Math.random() * 200
     const y = 100 + Math.random() * 200
-    store.addSketchNode({
-      code: sketch.code,
-      library: sketch.library,
-      position: { x, y },
-      title: sketch.title,
-    })
+    store.addSketchNode({ code: sketch.code, library: sketch.library, position: { x, y }, title: sketch.title })
   }
 
   return (
@@ -35,28 +26,29 @@ export default function ExamplesPanel() {
       {/* Header */}
       <div className="px-3 pt-3 pb-2 flex-shrink-0">
         <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Examples</h2>
-        <Input
+        <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search…"
+          className="flex h-7 w-full rounded-md border border-border bg-input px-3 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
         />
       </div>
 
       {/* List */}
-      <ScrollArea className="flex-1 px-2">
+      <div className="flex-1 overflow-y-auto px-2 min-h-0">
         <div className="space-y-2 pb-4 pt-1">
           {filtered.map((sketch) => (
             <button
               key={sketch.id}
               onClick={() => addToCanvas(sketch)}
               className="w-full text-left rounded-md overflow-hidden transition-all hover:ring-1 hover:ring-accent"
-              style={{ background: '#131820', border: '1px solid #222' }}
+              style={{ background: '#131820', border: '1px solid #222', display: 'block' }}
               title={`Add "${sketch.title}" to canvas`}
             >
-              {/* Tiny preview */}
+              {/* Scaled preview thumbnail */}
               <div
-                className="w-full overflow-hidden pointer-events-none"
-                style={{ height: 80, background: '#0a0a0a' }}
+                className="overflow-hidden pointer-events-none"
+                style={{ width: '100%', height: 80, background: '#0a0a0a' }}
               >
                 <div style={{ transform: 'scale(0.37)', transformOrigin: 'top left', width: 'calc(100% / 0.37)' }}>
                   <SketchPreview
@@ -70,21 +62,21 @@ export default function ExamplesPanel() {
                 </div>
               </div>
               <div className="px-2 py-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-foreground">{sketch.title}</span>
-                  <Badge variant={sketch.library === 'p5js' ? 'p5' : 'threejs'} className="rounded text-[10px]">
+                <div className="flex items-center justify-between gap-1">
+                  <span className="text-xs font-medium text-foreground truncate">{sketch.title}</span>
+                  <Badge variant={sketch.library === 'p5js' ? 'p5' : 'threejs'} className="rounded text-[10px] flex-shrink-0">
                     {sketch.library === 'p5js' ? 'p5' : '3js'}
                   </Badge>
                 </div>
-                <p className="text-2xs text-muted-foreground mt-0.5">{sketch.description}</p>
+                <p className="text-2xs text-muted-foreground mt-0.5 line-clamp-2">{sketch.description}</p>
               </div>
             </button>
           ))}
         </div>
-      </ScrollArea>
+      </div>
 
       {/* New sketch buttons */}
-      <Separator />
+      <div className="h-px bg-border flex-shrink-0" />
       <div className="px-3 pb-3 pt-2 flex-shrink-0 space-y-1.5">
         <p className="text-2xs text-muted-foreground mb-1">New blank sketch</p>
         <Button

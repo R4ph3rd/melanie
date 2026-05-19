@@ -110,6 +110,22 @@ input[type='range']::-moz-range-thumb {
   border: 2px solid #0e0e14;
 }
 
+/* ── Dark theme for native inputs / textareas ── */
+input:not([type='range']),
+textarea {
+  background-color: hsl(var(--input));
+  color: hsl(var(--foreground));
+}
+/* Suppress browser autofill yellow/white override */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px hsl(240 11% 11%) inset !important;
+  -webkit-text-fill-color: hsl(var(--foreground)) !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
 /* ── Transition helpers ── */
 .panel-slide {
   transition: width 0.2s ease, opacity 0.2s ease;
