@@ -58,6 +58,7 @@ export default function App() {
   }, [])
 
   return (
+    <ReactFlowProvider>
     <div className="flex flex-col" style={{ height: '100vh', width: '100vw', overflow: 'hidden' }}>
       {/* Top bar */}
       <div className="relative flex-shrink-0">
@@ -114,11 +115,10 @@ export default function App() {
 
         {/* Canvas */}
         <div className="flex-1 overflow-hidden">
-          <ReactFlowProvider>
-            <Canvas />
-          </ReactFlowProvider>
+          <Canvas />
         </div>
       </div>
     </div>
+    </ReactFlowProvider>
   )
 }

@@ -53,4 +53,8 @@ export interface ExampleSketch {
   description: string
   code: string
   library: LibraryType
+  // Optional human-friendly labels keyed by variable name. Applied to the
+  // extracted parameters when the example is added to the canvas, so sliders
+  // show readable labels instead of technical camelCase names.
+  semanticLabels?: Record<string, string>
 }

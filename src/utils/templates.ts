@@ -82,12 +82,23 @@ export const EXAMPLE_SKETCHES: ExampleSketch[] = [
     description: 'Simple concentric circles',
     library: 'p5js',
     code: CONCENTRIC_CIRCLES,
+    semanticLabels: {
+      numCircles:   'How many rings',
+      circleSize:   'Spacing between rings',
+      strokeW:      'Line thickness',
+      bgBrightness: 'Background brightness',
+    },
   },
   {
     id: 'bouncing',
     title: 'Bouncing Balls',
     description: 'Balls bouncing off walls',
     library: 'p5js',
+    semanticLabels: {
+      numBalls: 'Number of balls',
+      ballSize: 'Ball size',
+      speed:    'Movement speed',
+    },
     code: `let numBalls = 12;
 let ballSize = 20;
 let speed = 2;
@@ -124,6 +135,11 @@ function draw() {
     title: 'Spiral',
     description: 'Animated spiral pattern',
     library: 'p5js',
+    semanticLabels: {
+      numPoints:   'Spiral density',
+      radiusScale: 'Spiral spread',
+      angleStep:   'Twist amount',
+    },
     code: `let numPoints = 300;
 let radiusScale = 1.5;
 let angleStep = 0.2;
@@ -156,6 +172,10 @@ function draw() {
     title: 'Perlin Flow Field',
     description: 'Flow field using Perlin noise',
     library: 'p5js',
+    semanticLabels: {
+      scl:          'Flow field detail',
+      numParticles: 'Number of particles',
+    },
     code: `let scl = 20;
 let cols, rows;
 let zoff = 0;
@@ -208,6 +228,12 @@ function draw() {
     title: 'Lissajous Curve',
     description: 'Animated Lissajous figure',
     library: 'p5js',
+    semanticLabels: {
+      a:           'Horizontal frequency',
+      b:           'Vertical frequency',
+      trailLength: 'Trail length',
+      radius:      'Figure size',
+    },
     code: `let a = 3;
 let b = 2;
 let delta = 0;
@@ -246,6 +272,11 @@ function draw() {
     title: 'Interactive Grid',
     description: 'Grid reacts to mouse',
     library: 'p5js',
+    semanticLabels: {
+      gridSize:  'Grid spacing',
+      influence: 'Mouse reach',
+      dotSize:   'Dot size',
+    },
     code: `let gridSize = 30;
 let cols, rows;
 let influence = 120;
@@ -285,6 +316,9 @@ function draw() {
     title: '3D Particles',
     description: 'Floating particle system',
     library: 'threejs',
+    semanticLabels: {
+      numParticles: 'Number of particles',
+    },
     code: `const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, 460 / 400, 0.1, 200);
 camera.position.z = 5;

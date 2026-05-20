@@ -40,6 +40,8 @@ import SketchNode from './nodes/SketchNode'
 import OperatorNode from './nodes/OperatorNode'
 import OpsToolbar from './OpsToolbar'
 import SketchPreview from './SketchPreview'
+import { EXAMPLE_DRAG_MIME } from './ExamplesPanel'
+import { EXAMPLE_SKETCHES } from '../utils/templates'
 import type { OperatorType } from '../utils/types'
 
 // ─── Node types ───────────────────────────────────────────────────────────────
@@ -289,6 +291,29 @@ export default function Canvas() {
     : null
   const backgroundData    = backgroundSketch?.type === 'sketch' ? backgroundSketch.data : null
 
+  // ── Drag-and-drop from the ExamplesPanel ──────────────────────────────────
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    if (e.dataTransfer.types.includes(EXAMPLE_DRAG_MIME)) {
+      e.preventDefault()
+      e.dataTransfer.dropEffect = 'copy'
+    }
+  }, [])
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    const sketchId = e.dataTransfer.getData(EXAMPLE_DRAG_MIME)
+    if (!sketchId) return
+    e.preventDefault()
+    const sketch = EXAMPLE_SKETCHES.find((s) => s.id === sketchId)
+    if (!sketch) return
+    const flowPos = screenToFlowPosition({ x: e.clientX, y: e.clientY })
+    store.addSketchNode({
+      code:           sketch.code,
+      library:        sketch.library,
+      position:       { x: flowPos.x - 140, y: flowPos.y - 130 },
+      title:          sketch.title,
+      semanticLabels: sketch.semanticLabels,
+    })
+  }, [screenToFlowPosition, store])
+
   // Track viewport size so the background iframe fills it.
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [viewportSize, setViewportSize] = useState({ w: 0, h: 0 })
@@ -307,6 +332,8 @@ export default function Canvas() {
       ref={wrapperRef}
       className="relative w-full h-full"
       onPointerMove={handlePointerMove}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
     >
       {/* Background sketch : fills the whole canvas, sits behind ReactFlow */}
       {backgroundData && viewportSize.w > 0 && (

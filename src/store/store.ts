@@ -16,7 +16,7 @@ import type {
   OperatorType,
 } from '../utils/types'
 import { CONCENTRIC_CIRCLES, TORUS } from '../utils/templates'
-import { extractParameters, updateParameterInCode } from '../utils/codeUtils'
+import { extractParameters, updateParameterInCode, applySemanticLabels } from '../utils/codeUtils'
 import { defaultProviderAndModel } from '../api/providers'
 
 // ─── LocalStorage keys ────────────────────────────────────────────────────────
@@ -32,7 +32,12 @@ const { providerId: DEFAULT_PROVIDER, modelId: DEFAULT_MODEL } = defaultProvider
 
 // ─── Initial graph ────────────────────────────────────────────────────────────
 const rootCode   = CONCENTRIC_CIRCLES
-const rootParams = extractParameters(rootCode)
+const rootParams = applySemanticLabels(extractParameters(rootCode), {
+  numCircles:   'How many rings',
+  circleSize:   'Spacing between rings',
+  strokeW:      'Line thickness',
+  bgBrightness: 'Background brightness',
+})
 
 const initialNodes: AppNode[] = [
   {
@@ -91,6 +96,7 @@ interface MelanieStore {
   addSketchNode: (opts: {
     code?: string; library?: LibraryType
     position?: { x: number; y: number }; title?: string; sourcePrompt?: string
+    semanticLabels?: Record<string, string>
   }) => string
 
   addOperatorNode: (opts: {
@@ -172,15 +178,19 @@ export const useStore = create<MelanieStore>((set, get) => ({
   setBackgroundSketchId: (id) => set({ backgroundSketchId: id }),
 
   // ── node CRUD ──
-  addSketchNode: ({ code, library = 'p5js', position = { x: 200, y: 200 }, title, sourcePrompt }) => {
+  addSketchNode: ({ code, library = 'p5js', position = { x: 200, y: 200 }, title, sourcePrompt, semanticLabels }) => {
     const id = nanoid(8)
     const resolved = code ?? (library === 'p5js' ? CONCENTRIC_CIRCLES : TORUS)
+    const baseParams = extractParameters(resolved)
+    const parameters = semanticLabels
+      ? applySemanticLabels(baseParams, semanticLabels)
+      : baseParams
     const newNode: AppNode = {
       id, type: 'sketch', position,
       data: {
         title: title ?? get().nextSketchTitle(),
         code: resolved, library,
-        parameters: extractParameters(resolved),
+        parameters,
         isRunning: true, sourcePrompt, generationKey: 0,
       },
     }
@@ -287,15 +297,8 @@ export const useStore = create<MelanieStore>((set, get) => ({
   getNodePosition: (id) => get().nodes.find((n) => n.id === id)?.position,
 
   resetCanvas: () => {
-    const code = CONCENTRIC_CIRCLES
     set({
-      nodes: [{
-        id: nanoid(8), type: 'sketch', position: { x: 200, y: 200 },
-        data: {
-          title: 'Sketch 0', code, library: 'p5js',
-          parameters: extractParameters(code), isRunning: true, generationKey: 0,
-        },
-      }],
+      nodes: [],
       edges: [],
       activeCodeNodeId:   null,
       mergingSourceId:    null,

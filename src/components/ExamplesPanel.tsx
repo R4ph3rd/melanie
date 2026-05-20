@@ -1,12 +1,16 @@
 import { useState } from 'react'
+import { useReactFlow } from '@xyflow/react'
 import { EXAMPLE_SKETCHES } from '../utils/templates'
 import { useStore } from '../store/store'
 import SketchPreview from './SketchPreview'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
 
+export const EXAMPLE_DRAG_MIME = 'application/x-melanie-example'
+
 export default function ExamplesPanel() {
   const store    = useStore()
+  const { screenToFlowPosition } = useReactFlow()
   const [search, setSearch] = useState('')
 
   const filtered = EXAMPLE_SKETCHES.filter(
@@ -15,10 +19,33 @@ export default function ExamplesPanel() {
       e.description.toLowerCase().includes(search.toLowerCase())
   )
 
+  // Place the example at the centre of the currently visible canvas area
   function addToCanvas(sketch: typeof EXAMPLE_SKETCHES[0]) {
-    const x = 200 + Math.random() * 200
-    const y = 100 + Math.random() * 200
-    store.addSketchNode({ code: sketch.code, library: sketch.library, position: { x, y }, title: sketch.title })
+    // The .react-flow pane wraps the visible canvas; we measure it to find
+    // the screen-space centre then convert to flow coords. The resulting flow
+    // point becomes the node's top-left, so we nudge it up-left a bit so it
+    // ends up visually centred regardless of node size.
+    const pane = document.querySelector('.react-flow') as HTMLElement | null
+    let flowX = 200, flowY = 200
+    if (pane) {
+      const r = pane.getBoundingClientRect()
+      const p = screenToFlowPosition({ x: r.left + r.width / 2, y: r.top + r.height / 2 })
+      flowX = p.x - 140
+      flowY = p.y - 130
+    }
+    store.addSketchNode({
+      code:           sketch.code,
+      library:        sketch.library,
+      position:       { x: flowX, y: flowY },
+      title:          sketch.title,
+      semanticLabels: sketch.semanticLabels,
+    })
+  }
+
+  // Drag-and-drop — set a custom MIME so Canvas knows it's a sketch example
+  function handleDragStart(e: React.DragEvent, sketch: typeof EXAMPLE_SKETCHES[0]) {
+    e.dataTransfer.setData(EXAMPLE_DRAG_MIME, sketch.id)
+    e.dataTransfer.effectAllowed = 'copy'
   }
 
   return (
@@ -41,9 +68,11 @@ export default function ExamplesPanel() {
             <button
               key={sketch.id}
               onClick={() => addToCanvas(sketch)}
-              className="w-full text-left rounded-md overflow-hidden transition-all hover:ring-1 hover:ring-accent"
+              draggable
+              onDragStart={(e) => handleDragStart(e, sketch)}
+              className="w-full text-left rounded-md overflow-hidden transition-all hover:ring-1 hover:ring-accent cursor-grab active:cursor-grabbing"
               style={{ background: '#131820', border: '1px solid #222', display: 'block' }}
-              title={`Add "${sketch.title}" to canvas`}
+              title={`Click or drag "${sketch.title}" onto the canvas`}
             >
               {/* Scaled preview thumbnail */}
               <div
