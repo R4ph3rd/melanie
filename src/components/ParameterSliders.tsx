@@ -1,5 +1,5 @@
 /**
- * ParameterSliders — rendered inside sketch nodes.
+ * ParameterSliders : rendered inside sketch nodes.
  *
  * Fixes:
  *  • nodrag + nopan classes + stopPropagation on pointerdown so ReactFlow
@@ -71,7 +71,7 @@ const ParameterSliders = memo(function ParameterSliders({ nodeId, params }: Prop
 
         return (
           <div key={p.name} className="flex items-center gap-2">
-            {/* Label — click to start param transfer */}
+            {/* Label : click to start param transfer */}
             <button
               className="flex items-center gap-1 text-2xs font-mono truncate transition-colors text-left nodrag"
               style={{
@@ -96,7 +96,7 @@ const ParameterSliders = memo(function ParameterSliders({ nodeId, params }: Prop
               <span className="truncate">{p.semanticLabel || p.label}</span>
             </button>
 
-            {/* Range slider — value stays within the fixed bounds */}
+            {/* Range slider : value stays within the fixed bounds */}
             <input
               type="range"
               min={p.min}

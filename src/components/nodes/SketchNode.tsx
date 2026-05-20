@@ -1,4 +1,4 @@
-import { memo, useState, useCallback } from 'react'
+import { memo, useState, useCallback, useEffect, useRef } from 'react'
 import { Handle, Position, NodeResizer, type NodeProps, type Node, useReactFlow } from '@xyflow/react'
 import { nanoid } from 'nanoid'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -9,7 +9,9 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import type { SketchNodeData, OperatorType } from '../../utils/types'
 import { useStore } from '../../store/store'
-import { buildIframeSrcdoc } from '../../utils/codeUtils'
+import { buildSketchPopupHtml } from '../../utils/codeUtils'
+import { generate } from '../../api/providers'
+import { buildRegionalEditMessages, getRegionalEditSystem } from '../../prompts'
 import SketchPreview from '../SketchPreview'
 import ParameterSliders from '../ParameterSliders'
 import { Button } from '../ui/button'
@@ -44,20 +46,78 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
   }, [id, isBackground, store])
 
   // ─── Open sketch in a new browser window ──────────────────────────────────
+  // Holds a reference to the popup window so we can push code updates to it
+  // and listen for regional-edit requests coming back.
+  const popupRef = useRef<Window | null>(null)
+
   const handleOpenInWindow = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
-    const html = buildIframeSrcdoc(data.code, data.library)
-    const blob = new Blob([html], { type: 'text/html' })
-    const url  = URL.createObjectURL(blob)
-    const w = window.open(url, '_blank', 'width=900,height=700,toolbar=no,menubar=no')
-    if (!w) {
-      alert('Popup blocked — please allow popups for this site.')
-      URL.revokeObjectURL(url)
+    // Re-focus an existing popup instead of opening a new one
+    if (popupRef.current && !popupRef.current.closed) {
+      popupRef.current.focus()
       return
     }
-    // Revoke the blob URL after the new window has loaded its content
-    setTimeout(() => URL.revokeObjectURL(url), 30_000)
+    const w = window.open('', `melanie-sketch-${id}`, 'width=900,height=700,toolbar=no,menubar=no')
+    if (!w) {
+      alert('Popup blocked, please allow popups for this site.')
+      return
+    }
+    popupRef.current = w
+    // document.write keeps the popup at the opener's origin so postMessage
+    // works without CORS friction (Blob URLs have origin "null").
+    w.document.open()
+    w.document.write(buildSketchPopupHtml(data.code, data.library, data.title))
+    w.document.close()
+  }, [id, data.code, data.library, data.title])
+
+  // Push code updates to the popup whenever data.code (or library) changes.
+  useEffect(() => {
+    const p = popupRef.current
+    if (!p || p.closed) return
+    p.postMessage({ type: 'code-update', code: data.code, library: data.library }, '*')
   }, [data.code, data.library])
+
+  // Handle messages coming back from the popup, primarily the regional-edit
+  // request. We call the LLM here (the popup has no API key access) and push
+  // the result back via the code-update message above.
+  useEffect(() => {
+    const onMessage = async (e: MessageEvent) => {
+      // Accept only messages from our popup
+      if (!popupRef.current || e.source !== popupRef.current) return
+      const d = e.data
+      if (!d || typeof d !== 'object' || d.type !== 'regional-edit') return
+
+      const { region, prompt: regionPrompt } = d as {
+        type: 'regional-edit'
+        region: { x: number; y: number; w: number; h: number; canvasW: number; canvasH: number }
+        prompt: string
+      }
+      const apiKey = store.getActiveKey()
+      if (!apiKey) {
+        popupRef.current?.postMessage({ type: 'generation-error', message: 'No API key set. Add one via "Connect Models" in the top bar.' }, '*')
+        return
+      }
+      popupRef.current?.postMessage({ type: 'generation-state', generating: true }, '*')
+      try {
+        const newCode = await generate({
+          providerId: store.providerId,
+          apiKey,
+          modelId:    store.modelId,
+          system:     getRegionalEditSystem(data.library),
+          messages:   buildRegionalEditMessages(data.code, regionPrompt, region, data.library),
+          maxTokens:  4096,
+        })
+        store.updateSketchCode(id, newCode)
+        // updateSketchCode mutation will trigger the data.code useEffect above
+        // which will postMessage the new code to the popup.
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Unknown error'
+        popupRef.current?.postMessage({ type: 'generation-error', message: msg }, '*')
+      }
+    }
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [id, data.code, data.library, store])
 
   // ─── Toolbar-op click handler ──────────────────────────────────────────────
   // When a toolbar op is pending, clicking this sketch applies it.
@@ -71,7 +131,7 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
     const baseY = (pos?.y ?? 0)
 
     if (op === 'merge' || op === 'diff') {
-      // Set this node as merge source — user then clicks target
+      // Set this node as merge source, user then clicks target
       store.setMergingSourceId(id, op)
       return
     }
@@ -234,7 +294,7 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
       }}
       onClick={handleNodeClick}
     >
-      {/* Resize handles — visible on selection */}
+      {/* Resize handles, visible on selection */}
       <NodeResizer
         isVisible={selected}
         minWidth={PREVIEW_W + 20}

@@ -180,6 +180,45 @@ Modify the target sketch to incorporate this concept meaningfully. The parameter
   ]
 }
 
+// ─── Regional / in-place semantic edit ────────────────────────────────────────
+
+export function getRegionalEditSystem(library: LibraryType): string {
+  const base = library === 'p5js' ? P5_SYSTEM : THREEJS_SYSTEM
+  return `${base}
+
+You will receive a sketch and a user request that applies to a SPECIFIC rectangular
+region of the rendered canvas. Identify which drawing commands fall inside that
+region (using their coordinates relative to the canvas size) and modify ONLY those
+commands. Keep everything outside the region byte-for-byte identical wherever
+possible. Output the FULL updated sketch code, not a diff.`
+}
+
+export function buildRegionalEditMessages(
+  sourceCode: string,
+  prompt: string,
+  region: { x: number; y: number; w: number; h: number; canvasW: number; canvasH: number },
+  library: LibraryType,
+) {
+  const libName = library === 'p5js' ? 'p5.js' : 'three.js'
+  const xPct = ((region.x / region.canvasW) * 100).toFixed(1)
+  const yPct = ((region.y / region.canvasH) * 100).toFixed(1)
+  const wPct = ((region.w / region.canvasW) * 100).toFixed(1)
+  const hPct = ((region.h / region.canvasH) * 100).toFixed(1)
+  return [
+    {
+      role: 'user' as const,
+      content:
+        `Source ${libName} sketch:\n\n${sourceCode}\n\n` +
+        `Regional edit request: "${prompt}"\n\n` +
+        `Apply this change ONLY to visual elements inside the rectangle:\n` +
+        `  top-left:  (${region.x.toFixed(0)}px, ${region.y.toFixed(0)}px) ≈ (${xPct}%, ${yPct}%)\n` +
+        `  size:      ${region.w.toFixed(0)}px × ${region.h.toFixed(0)}px (${wPct}% × ${hPct}%)\n` +
+        `  canvas:    ${region.canvasW}px × ${region.canvasH}px\n\n` +
+        `Leave everything outside this region visually unchanged. Output the full updated code.`,
+    },
+  ]
+}
+
 export function getSystemForOperator(op: OperatorType, library: LibraryType): string {
   switch (op) {
     case 'modify':    return getModifySystem(library)

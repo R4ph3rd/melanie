@@ -1,5 +1,5 @@
 /**
- * OperatorNode — generates code via the multi-provider API.
+ * OperatorNode : generates code via the multi-provider API.
  *
  * After code generation it fires an async semantic-label enrichment call
  * so parameter sliders show human-readable labels instead of variable names.
@@ -213,7 +213,7 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
   // ── Cascade re-generation ──────────────────────────────────────────────────
   // When a source sketch's code changes (e.g. user edits it or an upstream
   // operator updates it), automatically re-run this operator after a short
-  // debounce — mirroring the Spellburst paper's cascade feature.
+  // debounce : mirroring the Spellburst paper's cascade feature.
   useEffect(() => {
     // First render: record baseline codes, don't cascade
     if (prevSrc1Code.current === null) {
@@ -234,7 +234,7 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
     const hasOutput  = (targetData?.code?.length ?? 0) > 0 || (isDiff && !!data.diffText)
     if (!hasOutput || data.isGenerating) return
 
-    // Debounce — wait for the user to finish typing before re-generating
+    // Debounce : wait for the user to finish typing before re-generating
     clearTimeout(cascadeTimer.current)
     cascadeTimer.current = setTimeout(() => {
       handleGenerateRef.current?.()
@@ -270,7 +270,7 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
   function handlePromptChange(v: string) {
     setPrompt(v)
     store.updateOperator(id, { prompt: v })
-    // Always close the dropdown immediately when the user types — it reopens
+    // Always close the dropdown immediately when the user types, it reopens
     // automatically after a 700ms pause via the debounced fetchSuggestions.
     setShowSuggestions(false)
     clearTimeout(autocompleteTimer.current)

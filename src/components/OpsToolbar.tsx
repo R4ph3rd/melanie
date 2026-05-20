@@ -1,5 +1,5 @@
 /**
- * Persistent operations toolbar — rendered inside the ReactFlow canvas via <Panel>.
+ * Persistent operations toolbar : rendered inside the ReactFlow canvas via <Panel>.
  * Positioned top-left, aligned visually with the zoom Controls.
  * Clicking an op button enters "pending toolbar op" mode; the user then clicks
  * a sketch node to apply the operation.

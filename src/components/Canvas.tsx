@@ -1,5 +1,5 @@
 /**
- * Canvas — the main ReactFlow workspace.
+ * Canvas - the main ReactFlow workspace.
  *
  * New behaviours:
  *  • onConnectEnd: when a connector is dragged to empty space, a floating
@@ -155,7 +155,7 @@ export default function Canvas() {
       const tgtNode = nodes.find((n) => n.id === connection.target)
 
       if (srcNode?.type === 'sketch' && tgtNode?.type === 'sketch') {
-        // Don't add edge yet — show merge/diff chooser
+        // Don't add edge yet : show merge/diff chooser
         setMergeMenu({
           screenX:      lastPtr.current.x,
           screenY:      lastPtr.current.y,
@@ -175,7 +175,7 @@ export default function Canvas() {
     (op: OperatorType, sourceNodeId: string, dropX: number, dropY: number) => {
       setConnOpsMenu(null)
 
-      // Merge and Diff need a second sketch — enter pick mode, same as toolbar
+      // Merge and Diff need a second sketch : enter pick mode, same as toolbar
       if (op === 'merge' || op === 'diff') {
         store.setMergingSourceId(sourceNodeId, op)
         return
@@ -308,7 +308,7 @@ export default function Canvas() {
       className="relative w-full h-full"
       onPointerMove={handlePointerMove}
     >
-      {/* Background sketch — fills the whole canvas, sits behind ReactFlow */}
+      {/* Background sketch : fills the whole canvas, sits behind ReactFlow */}
       {backgroundData && viewportSize.w > 0 && (
         <div
           className="absolute inset-0 pointer-events-none"

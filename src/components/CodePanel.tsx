@@ -47,7 +47,7 @@ export default function CodePanel({ nodeId, onClose }: Props) {
   applyCodeRef.current = applyCode
 
   // Stable extension: Ctrl+Enter / Cmd+Enter triggers apply from inside the editor.
-  // Created once (empty deps) — freshness is handled via the ref above.
+  // Created once (empty deps) : freshness is handled via the ref above.
   const extensions = useMemo(() => [
     javascript({ jsx: false }),
     Prec.highest(keymap.of([{

@@ -74,7 +74,7 @@ export default function App() {
           <ExamplesPanel />
         </div>
 
-        {/* Code panel — no transition while dragging so it tracks cursor live */}
+        {/* Code panel: no transition while dragging so it tracks cursor live */}
         {showCode && (
           <div
             className="flex-shrink-0 overflow-hidden"
@@ -90,7 +90,7 @@ export default function App() {
           </div>
         )}
 
-        {/* Visible + draggable resize handle — replaces the old decorative 1px divider */}
+        {/* Visible + draggable resize handle : replaces the old decorative 1px divider */}
         {showCode && (
           <div
             onMouseDown={onResizeMouseDown}

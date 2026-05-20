@@ -61,7 +61,7 @@ export default function ModelConnectModal({ onClose }: Props) {
             </DialogPrimitive.Description>
           </div>
 
-          {/* Provider list — scrollable */}
+          {/* Provider list scrollable */}
           <div className="flex-1 overflow-y-auto px-6 min-h-0">
             <div className="space-y-3 pb-4">
               {PROVIDERS.map((provider) => {
