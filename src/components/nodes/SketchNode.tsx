@@ -14,6 +14,7 @@ import { generate } from '../../api/providers'
 import { buildRegionalEditMessages, getRegionalEditSystem } from '../../prompts'
 import SketchPreview from '../SketchPreview'
 import ParameterSliders from '../ParameterSliders'
+import SemanticAxes    from '../SemanticAxes'
 import { Button } from '../ui/button'
 import { Badge } from '../ui/badge'
 
@@ -440,6 +441,10 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
 
       {/* Parameter sliders */}
       <ParameterSliders nodeId={id} params={data.parameters} />
+
+      {/* LLM-proposed latent knobs (chaos/order, dense/sparse, …).
+          Each scrub re-prompts the model from the axesBaseline snapshot. */}
+      <SemanticAxes nodeId={id} />
 
       {/* Interactive target overlay — pointer-events-auto so clicks anywhere on
           the node are captured when an operation mode is active, even if child

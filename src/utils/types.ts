@@ -13,6 +13,18 @@ export interface Parameter {
   step: number
 }
 
+// Semantic axis — a Photoshop-style "latent knob" that re-prompts the model
+// rather than tweaking a variable. The LLM proposes 3-4 axes per sketch with
+// two opposing poles; scrubbing the slider interpolates between them.
+export interface SemanticAxis {
+  id: string
+  leftLabel:  string   // e.g. "chaos"
+  rightLabel: string   // e.g. "order"
+  leftPrompt:  string  // one-line description of the left pole
+  rightPrompt: string  // one-line description of the right pole
+  value: number        // 0..1 (0 = full left, 0.5 = neutral, 1 = full right)
+}
+
 export interface SketchNodeData extends Record<string, unknown> {
   title: string
   code: string
@@ -25,6 +37,11 @@ export interface SketchNodeData extends Record<string, unknown> {
   // Optional persisted node dimensions (controlled by NodeResizer)
   width?:  number
   height?: number
+  // LLM-proposed latent axes (chaos/order, dense/sparse, …) — scrubbing
+  // them re-prompts the model rather than tweaking a variable.
+  semanticAxes?:  SemanticAxis[]
+  axesBaseline?:  string   // code snapshot the axes were generated against
+  axesGenerating?: boolean // true while LLM is regenerating from a scrub
 }
 
 export interface OperatorNodeData extends Record<string, unknown> {

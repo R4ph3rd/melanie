@@ -180,6 +180,85 @@ Modify the target sketch to incorporate this concept meaningfully. The parameter
   ]
 }
 
+// ─── Semantic / latent axes ("Photoshop knobs") ───────────────────────────────
+
+export function getSemanticAxesSystem(): string {
+  return `You analyse generative-art sketches and propose 3-4 SEMANTIC axes the artist
+could explore — high-level aesthetic dimensions, NOT code variables. Each axis has two
+opposing poles (e.g. "chaos" vs "order", "biological" vs "mechanical", "dense" vs
+"sparse", "warm" vs "cold", "minimal" vs "maximal").
+
+Choose axes that are SPECIFIC to the given sketch (avoid generic suggestions when the
+sketch suggests something more interesting). For each axis, write a concise (1 short
+sentence) prompt fragment describing what each pole would look like for THIS sketch.
+
+Respond ONLY with valid JSON, no markdown, no commentary, in this exact shape:
+[
+  {
+    "leftLabel":   "chaos",
+    "rightLabel":  "order",
+    "leftPrompt":  "Overlapping shapes scattered randomly, jittery motion, broken symmetry.",
+    "rightPrompt": "Perfectly aligned grid, harmonic spacing, mirror symmetry, deliberate timing."
+  },
+  ...
+]`
+}
+
+export function buildSemanticAxesMessages(
+  code: string,
+  library: LibraryType,
+  sourcePrompt?: string,
+) {
+  const libName = library === 'p5js' ? 'p5.js' : 'three.js'
+  return [
+    {
+      role: 'user' as const,
+      content:
+        `${libName} sketch:\n\n${code}\n\n` +
+        (sourcePrompt ? `Original intent: "${sourcePrompt}"\n\n` : '') +
+        `Propose 3-4 semantic axes the artist could scrub to explore variants of THIS sketch.`,
+    },
+  ]
+}
+
+export function getAxisScrubSystem(library: LibraryType): string {
+  const base = library === 'p5js' ? P5_SYSTEM : THREEJS_SYSTEM
+  return `${base}
+
+You will receive a BASELINE sketch and a set of semantic-axis values the artist has
+scrubbed to. Each axis sits between two opposing poles. Re-write the sketch so its
+aesthetics shift to match the requested axis values, blending the pole descriptions
+proportionally. Preserve the sketch's core idea (its subject matter and overall
+structure); only the aesthetics — shapes, motion, density, colour, mood — should
+move along the requested axes. Output the FULL updated sketch code.`
+}
+
+export function buildAxisScrubMessages(
+  baselineCode: string,
+  axes: { leftLabel: string; rightLabel: string; leftPrompt: string; rightPrompt: string; value: number }[],
+  library: LibraryType,
+) {
+  const libName = library === 'p5js' ? 'p5.js' : 'three.js'
+  const axisLines = axes.map((a) => {
+    const pctRight = Math.round(a.value * 100)
+    const pctLeft  = 100 - pctRight
+    return (
+      `• "${a.leftLabel}" ↔ "${a.rightLabel}" — at ${pctLeft}% / ${pctRight}%\n` +
+      `    left pole:  ${a.leftPrompt}\n` +
+      `    right pole: ${a.rightPrompt}`
+    )
+  }).join('\n')
+  return [
+    {
+      role: 'user' as const,
+      content:
+        `Baseline ${libName} sketch:\n\n${baselineCode}\n\n` +
+        `Re-generate the sketch with these axis positions:\n${axisLines}\n\n` +
+        `Output the full updated code. Keep the subject; shift the aesthetics.`,
+    },
+  ]
+}
+
 // ─── Regional / in-place semantic edit ────────────────────────────────────────
 
 export function getRegionalEditSystem(library: LibraryType): string {

@@ -14,6 +14,7 @@ import type {
   Parameter,
   LibraryType,
   OperatorType,
+  SemanticAxis,
 } from '../utils/types'
 import { CONCENTRIC_CIRCLES, TORUS } from '../utils/templates'
 import { extractParameters, updateParameterInCode, applySemanticLabels } from '../utils/codeUtils'
@@ -112,6 +113,9 @@ interface MelanieStore {
   updateSketchTitle:      (id: string, title: string) => void
   updateSketchRunning:    (id: string, running: boolean) => void
   updateSketchDims:       (id: string, width: number, height: number) => void
+  setSketchAxes:          (id: string, axes: SemanticAxis[], baseline: string) => void
+  patchAxisValue:         (id: string, axisId: string, value: number) => void
+  setAxesGenerating:      (id: string, generating: boolean) => void
   reloadSketch:           (id: string) => void
   updateOperator:         (id: string, data: Partial<OperatorNodeData>) => void
   deleteNode:             (id: string) => void
@@ -258,6 +262,34 @@ export const useStore = create<MelanieStore>((set, get) => ({
     set((s) => ({
       nodes: s.nodes.map((n) =>
         n.id === id && n.type === 'sketch' ? { ...n, data: { ...n.data, width, height } } : n
+      ),
+    })),
+
+  setSketchAxes: (id, axes, baseline) =>
+    set((s) => ({
+      nodes: s.nodes.map((n) =>
+        n.id === id && n.type === 'sketch'
+          ? { ...n, data: { ...n.data, semanticAxes: axes, axesBaseline: baseline } }
+          : n
+      ),
+    })),
+
+  patchAxisValue: (id, axisId, value) =>
+    set((s) => ({
+      nodes: s.nodes.map((n) => {
+        if (n.id !== id || n.type !== 'sketch') return n
+        const axes = (n.data.semanticAxes as SemanticAxis[] | undefined) ?? []
+        const next = axes.map((a) => a.id === axisId ? { ...a, value } : a)
+        return { ...n, data: { ...n.data, semanticAxes: next } }
+      }),
+    })),
+
+  setAxesGenerating: (id, generating) =>
+    set((s) => ({
+      nodes: s.nodes.map((n) =>
+        n.id === id && n.type === 'sketch'
+          ? { ...n, data: { ...n.data, axesGenerating: generating } }
+          : n
       ),
     })),
 
