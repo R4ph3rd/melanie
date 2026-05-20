@@ -39,7 +39,7 @@ export default function OpsToolbar() {
   const pendingToolbarOp    = useStore((s) => s.pendingToolbarOp)
   const setPendingToolbarOp = useStore((s) => s.setPendingToolbarOp)
   const mergingSourceId     = useStore((s) => s.mergingSourceId)
-  const addSketchNode       = useStore((s) => s.addSketchNode)
+//   const addSketchNode       = useStore((s) => s.addSketchNode)
   const resetCanvas         = useStore((s) => s.resetCanvas)
 
   function handleClick(op: OperatorType) {
@@ -94,7 +94,7 @@ export default function OpsToolbar() {
 
         {/* ── Canvas actions ── */}
         <div className="mt-1 pt-1" style={{ borderTop: '1px solid #2a2a3a' }}>
-          <button
+          {/* <button
             onClick={() => addSketchNode({ library: 'p5js', position: { x: 300 + Math.random() * 200, y: 200 + Math.random() * 200 } })}
             title="Add a blank sketch to the canvas"
             className="flex items-center gap-2 px-2.5 py-1.5 rounded text-xs w-full nodrag transition-colors hover:bg-surface3"
@@ -102,7 +102,7 @@ export default function OpsToolbar() {
           >
             <FontAwesomeIcon icon={faPlus} className="w-3 h-3 flex-shrink-0" />
             <span style={{ color: '#888' }}>New Sketch</span>
-          </button>
+          </button> */}
           <button
             onClick={() => {
               if (window.confirm('Reset canvas? All nodes and edges will be removed.'))
