@@ -1,0 +1,47 @@
+name: Build & deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:   # also lets you trigger manually from the Actions tab
+
+# Needs write to push the built site to the gh-pages branch
+permissions:
+  contents: write
+
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (Vite)
+        run: npm run build
+        env:
+          # Repo name → site URL is https://<user>.github.io/melanie/
+          VITE_BASE: /melanie/
+
+      - name: Publish to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          publish_branch: gh-pages
+          # peaceiris adds .nojekyll automatically (enable_jekyll defaults to false)
+          commit_message: 'deploy: ${{ github.sha }}'
+          user_name:  'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
