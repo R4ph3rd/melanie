@@ -318,8 +318,7 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
         boxShadow: selected
           ? `0 0 0 2px ${nodeAccent}30, 0 4px 24px rgba(0,0,0,0.7)`
           : '0 4px 24px rgba(0,0,0,0.5)',
-        minWidth: PREVIEW_W + 20,
-        width:    data.width,
+        width: data.width ?? (PREVIEW_W + 20),
         cursor:   isInteractiveTarget ? 'crosshair' : 'default',
       }}
       onClick={handleNodeClick}
