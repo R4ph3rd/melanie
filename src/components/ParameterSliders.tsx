@@ -132,8 +132,15 @@ const ParameterSliders = memo(function ParameterSliders({ nodeId, params }: Prop
               />
             ) : (
               <button
-                className="text-2xs text-text-muted font-mono text-right nodrag hover:text-text-primary transition-colors"
-                style={{ width: 48, padding: '1px 3px' }}
+                className="text-2xs font-mono text-right nodrag"
+                style={{
+                  width: 48, padding: '1px 4px',
+                  background: '#1a1a1a',
+                //   border: '1px solid #333',
+                  borderRadius: 2,
+                  color: '#888',
+                  cursor: 'pointer',
+                }}
                 onClick={() => { setEditingName(p.name); setEditDraft(displayValue) }}
                 title="Click to type a value"
               >

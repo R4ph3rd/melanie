@@ -27,7 +27,7 @@ export const PROVIDERS: ProviderDef[] = [
   {
     id: 'anthropic',
     name: 'Anthropic',
-    logoUrl: 'https://cdn.brandfetch.io/idmJWF3N06/w/400/h/400/theme/dark/icon.jpeg?c=1dxbfHSJFAPEyhd6om',
+    logoUrl: 'https://www.google.com/s2/favicons?domain=anthropic.com&sz=64',
     keyPrefix: 'sk-ant-',
     docsUrl: 'https://console.anthropic.com/keys',
     models: [
@@ -39,7 +39,7 @@ export const PROVIDERS: ProviderDef[] = [
   {
     id: 'openai',
     name: 'OpenAI',
-    logoUrl: 'https://cdn.brandfetch.io/idR3duQxYl/theme/dark/symbol.svg?c=1dxbfHSJFAPEyhd6om',
+    logoUrl: 'https://www.google.com/s2/favicons?domain=openai.com&sz=64',
     keyPrefix: 'sk-',
     docsUrl: 'https://platform.openai.com/api-keys',
     models: [
@@ -51,7 +51,7 @@ export const PROVIDERS: ProviderDef[] = [
   {
     id: 'google',
     name: 'Google Gemini',
-    logoUrl: 'https://www.gstatic.com/lamda/images/gemini_sparkle_v002_d4735304ff6292a690345.svg',
+    logoUrl: 'https://www.google.com/s2/favicons?domain=gemini.google.com&sz=64',
     keyPrefix: 'AIza',
     docsUrl: 'https://aistudio.google.com/app/apikey',
     models: [
@@ -63,7 +63,7 @@ export const PROVIDERS: ProviderDef[] = [
   {
     id: 'mistral',
     name: 'Mistral',
-    logoUrl: 'https://cdn.brandfetch.io/id6eMvMNlQ/theme/dark/symbol.svg?c=1dxbfHSJFAPEyhd6om',
+    logoUrl: 'https://www.google.com/s2/favicons?domain=mistral.ai&sz=64',
     keyPrefix: '',
     docsUrl: 'https://console.mistral.ai/api-keys',
     models: [
@@ -75,7 +75,7 @@ export const PROVIDERS: ProviderDef[] = [
   {
     id: 'groq',
     name: 'Groq',
-    logoUrl: 'https://cdn.brandfetch.io/idnrCPuv87/theme/dark/symbol.svg?c=1dxbfHSJFAPEyhd6om',
+    logoUrl: 'https://www.google.com/s2/favicons?domain=groq.com&sz=64',
     keyPrefix: 'gsk_',
     docsUrl: 'https://console.groq.com/keys',
     models: [

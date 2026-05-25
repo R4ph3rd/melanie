@@ -21,8 +21,45 @@ const OPS: OpEntry[] = [
   { type: 'merge',     label: 'Merge',     icon: 'merge',     color: '#1d4ed8', title: 'Blend two sketches into one' },
   { type: 'diff',      label: 'Diff',      icon: 'diff',      color: '#047857', title: 'Compare two sketches' },
   { type: 'extract',   label: 'Extract',   icon: 'extract',   color: '#b45309', title: 'Isolate a visual element as a new sketch' },
-  { type: 'duplicate', label: 'Clone',     icon: 'duplicate', color: '#4b5563', title: 'Clone a sketch to branch from' },
+  { type: 'duplicate', label: 'Clone',     icon: 'duplicate', color: '#ca8a04', title: 'Clone a sketch to branch from' },
 ]
+
+function ClearButton({ onClick }: { onClick: () => void }) {
+  const [hovered, setHovered] = useState(false)
+  return (
+    <button
+      onClick={onClick}
+      title="Clear the canvas and start fresh"
+      className="nodrag"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 8,
+        padding: '5px 10px',
+        border: `1px solid ${hovered ? 'rgba(239,68,68,0.3)' : '#2a2a2a'}`,
+        borderRadius: 3,
+        background: hovered ? 'rgba(239,68,68,0.06)' : 'transparent',
+        color: hovered ? '#f87171' : '#707070',
+        fontFamily: 'var(--font-sans)',
+        fontSize: 12, fontWeight: 500,
+        cursor: 'pointer',
+        transition: 'all 0.1s',
+        minWidth: 118,
+      }}
+    >
+      <span style={{
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        width: 22, height: 22,
+        border: `2px solid ${hovered ? 'rgba(239,68,68,0.5)' : '#3a3a3a'}`,
+        borderRadius: 2, flexShrink: 0,
+        transition: 'border-color 0.1s',
+      }}>
+        <Icon name="delete" size={10} />
+      </span>
+      Clear
+    </button>
+  )
+}
 
 function OpButton({ op, isActive, onClick }: { op: OpEntry; isActive: boolean; onClick: () => void }) {
   const [hovered, setHovered] = useState(false)
@@ -81,7 +118,7 @@ export default function OpsToolbar() {
           padding: 6,
           background: '#111',
           border: '1px solid #333',
-          borderRadius: 4,
+          borderRadius: 2,
           boxShadow: '0 4px 20px rgba(0,0,0,0.6)',
         }}
       >
@@ -111,45 +148,10 @@ export default function OpsToolbar() {
 
         <div style={{ height: 1, background: '#2a2a2a', margin: '2px 0' }} />
 
-        <button
-          onClick={() => {
-            if (window.confirm('Reset canvas? All nodes and edges will be removed.'))
-              resetCanvas()
-          }}
-          title="Clear the canvas and start fresh"
-          className="nodrag"
-          style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            padding: '5px 10px',
-            border: '1px solid #2a2a2a',
-            borderRadius: 3,
-            background: 'transparent',
-            color: '#707070',
-            fontFamily: 'var(--font-sans)',
-            fontSize: 12, fontWeight: 500,
-            cursor: 'pointer',
-            transition: 'all 0.1s',
-            minWidth: 118,
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = '#f87171'
-            e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)'
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = '#707070'
-            e.currentTarget.style.borderColor = '#2a2a2a'
-          }}
-        >
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            width: 22, height: 22,
-            border: '2px solid #3a3a3a',
-            borderRadius: 2, flexShrink: 0,
-          }}>
-            <Icon name="delete" size={10} />
-          </span>
-          Clear
-        </button>
+        <ClearButton onClick={() => {
+          if (window.confirm('Reset canvas? All nodes and edges will be removed.'))
+            resetCanvas()
+        }} />
       </div>
     </Panel>
   )

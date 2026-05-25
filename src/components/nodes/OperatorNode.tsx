@@ -8,7 +8,7 @@
  * (used for param-transfer ops created programmatically).
  */
 import { memo, useState, useEffect, useRef, useCallback } from 'react'
-import { Handle, Position, type NodeProps, type Node } from '@xyflow/react'
+import { Handle, Position, NodeResizer, type NodeProps, type Node } from '@xyflow/react'
 import type { OperatorNodeData, OperatorType } from '../../utils/types'
 import Icon from '../ui/Icon'
 import { useStore } from '../../store/store'
@@ -35,7 +35,7 @@ interface Meta { icon: string; label: string; color: string }
 
 const OP_META: Record<OperatorType, Meta> = {
   modify:    { icon: 'modify',    label: 'Modify',    color: '#8C49DF' },
-  duplicate: { icon: 'duplicate', label: 'Duplicate', color: '#4b5563' },
+  duplicate: { icon: 'duplicate', label: 'Clone',     color: '#ca8a04' },
   merge:     { icon: 'merge',     label: 'Merge',     color: '#1d4ed8' },
   diff:      { icon: 'diff',      label: 'Diff',      color: '#047857' },
   extract:   { icon: 'extract',   label: 'Extract',   color: '#b45309' },
@@ -282,16 +282,23 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
       style={{
         background: '#111',
         border: selected ? `1.5px solid ${borderColor}` : '1px solid #2a2a2a',
-        borderRadius: 4,
+        borderRadius: 2,
         minWidth: 240,
-        maxWidth: 280,
         boxShadow: selected
           ? `0 0 0 2px ${borderColor}25, 0 4px 20px rgba(0,0,0,0.6)`
           : '0 4px 20px rgba(0,0,0,0.5)',
       }}
     >
-      <Handle type="target" position={Position.Left}  id="left"  style={{ background: borderColor, width: 10, height: 10, borderRadius: 1 }} />
-      <Handle type="source" position={Position.Right} id="right" style={{ background: borderColor, width: 10, height: 10, borderRadius: 1 }} />
+      <NodeResizer
+        isVisible={selected}
+        minWidth={220}
+        minHeight={100}
+        color={borderColor}
+        handleStyle={{ width: 10, height: 10, borderRadius: 2, border: '2px solid white', background: '#111' }}
+        lineStyle={{ display: 'none' }}
+      />
+      <Handle type="target" position={Position.Left}  id="left"  style={{ background: borderColor, width: 10, height: 10, borderRadius: 1, border: 'none' }} />
+      <Handle type="source" position={Position.Right} id="right" style={{ background: borderColor, width: 10, height: 10, borderRadius: 1, border: 'none' }} />
 
       {/* Header */}
       <div style={{
@@ -402,14 +409,10 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
                     key={i}
                     className="w-full text-left px-2 py-1.5 text-xs text-text-secondary hover:bg-surface3 hover:text-text-primary"
                     onMouseDown={(e) => {
-                      // preventDefault keeps focus on textarea so onBlur doesn't
-                      // race with this click.
                       e.preventDefault()
                       setPrompt(s)
                       store.updateOperator(id, { prompt: s })
                       setShowSuggestions(false)
-                      // Fire generation immediately with the chosen suggestion text.
-                      handleGenerate(s)
                     }}
                   >
                     {s}

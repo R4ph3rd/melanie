@@ -1,9 +1,40 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import { EXAMPLE_SKETCHES } from '../utils/templates'
 import { useStore } from '../store/store'
 import SketchPreview from './SketchPreview'
 import { Badge } from './ui/badge'
+
+const THUMB_H = 80
+
+function SketchThumbnail({ sketch }: { sketch: typeof EXAMPLE_SKETCHES[0] }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [w, setW] = useState(0)
+
+  useEffect(() => {
+    if (!ref.current) return
+    const ro = new ResizeObserver((entries) => {
+      setW(Math.floor(entries[0].contentRect.width))
+    })
+    ro.observe(ref.current)
+    return () => ro.disconnect()
+  }, [])
+
+  return (
+    <div ref={ref} style={{ width: '100%', height: THUMB_H, background: '#0a0a0a', overflow: 'hidden', pointerEvents: 'none' }}>
+      {w > 0 && (
+        <SketchPreview
+          code={sketch.code}
+          library={sketch.library}
+          isRunning={true}
+          generationKey={0}
+          width={w}
+          height={THUMB_H}
+        />
+      )}
+    </div>
+  )
+}
 
 export const EXAMPLE_DRAG_MIME = 'application/x-melanie-example'
 
@@ -87,18 +118,7 @@ export default function ExamplesPanel() {
               onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#222' }}
             >
               {/* Thumbnail */}
-              <div style={{ width: '100%', height: 72, background: '#0a0a0a', overflow: 'hidden', pointerEvents: 'none' }}>
-                <div style={{ transform: 'scale(0.33)', transformOrigin: 'top left', width: 'calc(100% / 0.33)' }}>
-                  <SketchPreview
-                    code={sketch.code}
-                    library={sketch.library}
-                    isRunning={true}
-                    generationKey={0}
-                    width={460}
-                    height={200}
-                  />
-                </div>
-              </div>
+              <SketchThumbnail sketch={sketch} />
               {/* Meta */}
               <div style={{ padding: '5px 8px 6px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4, marginBottom: 2 }}>

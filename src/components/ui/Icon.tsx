@@ -2,9 +2,9 @@ import type { CSSProperties } from 'react'
 import {
   Play, Pause, Restart, Code, Layers, Launch, CenterToFit, ShrinkScreenFilled, Close,
   MagicWand, Merge, Compare, Cut, Copy, TrashCan,
-  ChartScatter, Reset, ChildNode, ArrowsHorizontal, 
+  ChartScatter, Reset, ChildNode, ArrowsHorizontal,
   Flash, InProgress, Settings, Plug, Help, View, ViewOff, Checkmark,
-  StopFilled,
+  StopFilled, ZoomIn, ZoomOut, Locked, Unlocked, ChevronDown,
 } from '@carbon/icons-react'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -39,6 +39,13 @@ const ICONS: Record<string, React.ElementType<any>> = {
 
   // Param transfer
   'param-transfer':     ArrowsHorizontal,
+
+  // Canvas controls
+  'zoom-in':            ZoomIn,
+  'zoom-out':           ZoomOut,
+  'lock':               Locked,
+  'unlock':             Unlocked,
+  'chevron-down':       ChevronDown,
 
   // Generation
   'generate':           Flash,

@@ -157,12 +157,13 @@ const SemanticAxes = memo(function SemanticAxes({ nodeId }: Props) {
         <button
           onClick={discoverAxes}
           disabled={discoverLoading}
-          className="w-full flex items-center justify-center gap-2 text-xs py-1.5 rounded transition-colors"
+          className="w-full flex items-center justify-center gap-2 text-xs py-1.5 transition-colors"
           style={{
-            color:      discoverLoading ? '#888' : '#a78bfa',
-            background: 'rgba(140,73,223,0.08)',
-            border:     '1px dashed rgba(140,73,223,0.3)',
-            cursor:     discoverLoading ? 'wait' : 'pointer',
+            color:        discoverLoading ? '#888' : '#a78bfa',
+            background:   'rgba(140,73,223,0.08)',
+            border:       '1px solid rgba(140,73,223,0.35)',
+            borderRadius: 2,
+            cursor:       discoverLoading ? 'wait' : 'pointer',
           }}
           title="Ask the LLM to propose 3-4 aesthetic axes for this sketch"
         >

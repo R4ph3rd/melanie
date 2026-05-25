@@ -15,7 +15,7 @@ import {
   ReactFlow,
   Background,
   BackgroundVariant,
-  Controls,
+  Panel,
   MiniMap,
   type NodeTypes,
   type Connection,
@@ -55,7 +55,7 @@ interface OpMenuEntry {
 const CONN_OPS: OpMenuEntry[] = [
   { type: 'modify',    label: 'Modify',    icon: 'modify',    color: '#8C49DF' },
   { type: 'extract',   label: 'Extract',   icon: 'extract',   color: '#b45309' },
-  { type: 'duplicate', label: 'Duplicate', icon: 'duplicate', color: '#4b5563' },
+  { type: 'duplicate', label: 'Clone',     icon: 'duplicate', color: '#ca8a04' },
   { type: 'merge',     label: 'Merge',     icon: 'merge',     color: '#1d4ed8' },
   { type: 'diff',      label: 'Diff',      icon: 'diff',      color: '#047857' },
 ]
@@ -64,6 +64,79 @@ const MERGE_OPS: OpMenuEntry[] = [
   { type: 'merge', label: 'Merge', icon: 'merge', color: '#1d4ed8' },
   { type: 'diff',  label: 'Diff',  icon: 'diff',  color: '#047857' },
 ]
+
+// ─── Canvas controls panel (replaces ReactFlow default Controls) ─────────────
+
+function CanvasControls() {
+  const { zoomIn, zoomOut, fitView } = useReactFlow()
+  const [hov, setHov] = useState<string | null>(null)
+  const btns = [
+    { id: 'zoom-in',      title: 'Zoom in',     action: () => zoomIn() },
+    { id: 'zoom-out',     title: 'Zoom out',    action: () => zoomOut() },
+    { id: 'zoom-to-fit',  title: 'Fit view',    action: () => fitView({ padding: 0.15, duration: 300 }) },
+  ]
+  return (
+    <Panel position="bottom-left" style={{ marginBottom: 8, marginLeft: 8 }}>
+      <div style={{
+        display: 'flex', flexDirection: 'column', gap: 2,
+        background: '#111', border: '1px solid #2a2a2a', borderRadius: 2, padding: 3,
+        boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+      }}>
+        {btns.map((b) => (
+          <button
+            key={b.id}
+            onClick={b.action}
+            title={b.title}
+            className="nodrag"
+            onMouseEnter={() => setHov(b.id)}
+            onMouseLeave={() => setHov(null)}
+            style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              width: 26, height: 26, borderRadius: 2,
+              border: '2px solid #333',
+              background: hov === b.id ? 'rgba(255,255,255,0.07)' : 'transparent',
+              color: '#555',
+              cursor: 'pointer', transition: 'all 0.1s',
+            }}
+          >
+            <Icon name={b.id} size={14} />
+          </button>
+        ))}
+      </div>
+    </Panel>
+  )
+}
+
+// ─── Hover-aware op button for floating connection menus ──────────────────────
+
+function MenuOpButton({ op, onClick }: { op: OpMenuEntry; onClick: () => void }) {
+  const [hov, setHov] = useState(false)
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 8,
+        padding: '5px 10px', width: '100%', textAlign: 'left',
+        border: `1px solid ${hov ? op.color : '#2a2a2a'}`, borderRadius: 3,
+        background: hov ? `color-mix(in srgb, ${op.color} 10%, transparent)` : 'transparent',
+        color: hov ? op.color : '#707070',
+        fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 500,
+        cursor: 'pointer', transition: 'all 0.1s',
+      }}
+    >
+      <span style={{
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        width: 22, height: 22, flexShrink: 0,
+        border: `2px solid ${op.color}`, borderRadius: 2, color: op.color,
+      }}>
+        <Icon name={op.icon} size={10} />
+      </span>
+      {op.label}
+    </button>
+  )
+}
 
 // ─── Canvas ───────────────────────────────────────────────────────────────────
 
@@ -386,7 +459,7 @@ export default function Canvas() {
         {!backgroundData && (
           <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="#1e1e2e" />
         )}
-        <Controls style={{ background: '#111', border: '1px solid #2a2a2a', borderRadius: 3 }} />
+        <CanvasControls />
         <MiniMap
           style={{ background: '#0e0e16', border: '1px solid #2a2a3a' }}
           nodeColor={(n) => n.type === 'sketch' ? '#1a1f2e' : '#1c1428'}
@@ -404,7 +477,7 @@ export default function Canvas() {
             style={{
               left: connOpsMenu.screenX, top: connOpsMenu.screenY,
               transform: 'translate(-50%, 8px)',
-              background: '#111', border: '1px solid #333', borderRadius: 4,
+              background: '#111', border: '1px solid #333', borderRadius: 2,
               padding: 6, minWidth: 148,
               boxShadow: '0 4px 20px rgba(0,0,0,0.6)',
             }}
@@ -419,27 +492,11 @@ export default function Canvas() {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
               {CONN_OPS.map((op) => (
-                <button
+                <MenuOpButton
                   key={op.type}
+                  op={op}
                   onClick={() => applyConnOp(op.type, connOpsMenu.sourceNodeId, connOpsMenu.screenX, connOpsMenu.screenY)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    padding: '5px 10px', width: '100%', textAlign: 'left',
-                    border: '1px solid #2a2a2a', borderRadius: 3,
-                    background: 'transparent', color: '#707070',
-                    fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 500,
-                    cursor: 'pointer', transition: 'all 0.1s',
-                  }}
-                >
-                  <span style={{
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                    width: 22, height: 22, flexShrink: 0,
-                    border: `2px solid ${op.color}`, borderRadius: 2, color: op.color,
-                  }}>
-                    <Icon name={op.icon} size={10} />
-                  </span>
-                  {op.label}
-                </button>
+                />
               ))}
             </div>
             <button
@@ -466,7 +523,7 @@ export default function Canvas() {
             style={{
               left: mergeMenu.screenX, top: mergeMenu.screenY,
               transform: 'translate(-50%, 8px)',
-              background: '#111', border: '1px solid #333', borderRadius: 4,
+              background: '#111', border: '1px solid #333', borderRadius: 2,
               padding: 6, minWidth: 148,
               boxShadow: '0 4px 20px rgba(0,0,0,0.6)',
             }}
@@ -481,27 +538,11 @@ export default function Canvas() {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
               {MERGE_OPS.map((op) => (
-                <button
+                <MenuOpButton
                   key={op.type}
+                  op={op}
                   onClick={() => applyMergeOp(op.type as 'merge' | 'diff', mergeMenu.sourceNodeId, mergeMenu.targetNodeId)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    padding: '5px 10px', width: '100%', textAlign: 'left',
-                    border: '1px solid #2a2a2a', borderRadius: 3,
-                    background: 'transparent', color: '#707070',
-                    fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 500,
-                    cursor: 'pointer', transition: 'all 0.1s',
-                  }}
-                >
-                  <span style={{
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                    width: 22, height: 22, flexShrink: 0,
-                    border: `2px solid ${op.color}`, borderRadius: 2, color: op.color,
-                  }}>
-                    <Icon name={op.icon} size={10} />
-                  </span>
-                  {op.label}
-                </button>
+                />
               ))}
             </div>
             <button

@@ -17,16 +17,37 @@ type SketchNodeType = Node<SketchNodeData, 'sketch'>
 const PREVIEW_W = 260
 const PREVIEW_H = 200
 
-// Shared icon-badge button style for node controls
 const CTRL: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
   width: 26, height: 26, padding: 0, borderRadius: 2, flexShrink: 0,
   border: '2px solid #3a3a3a', background: 'transparent', color: '#606060',
-  cursor: 'pointer', transition: 'border-color 0.1s, color 0.1s',
+  cursor: 'pointer', transition: 'background 0.1s',
 }
 const CTRL_ACTIVE: React.CSSProperties = {
   ...CTRL, border: '2px solid #8C49DF', color: '#8C49DF',
   background: 'rgba(140,73,223,0.12)',
+}
+
+function CtrlButton({ active, extraStyle, children, ...props }: {
+  active?: boolean
+  extraStyle?: React.CSSProperties
+  children: React.ReactNode
+} & Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'style'>) {
+  const [hov, setHov] = useState(false)
+  return (
+    <button
+      {...props}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        ...(active ? CTRL_ACTIVE : CTRL),
+        ...(hov ? { background: 'rgba(255,255,255,0.07)' } : {}),
+        ...extraStyle,
+      }}
+    >
+      {children}
+    </button>
+  )
 }
 
 const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<SketchNodeType>) {
@@ -293,7 +314,7 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
       style={{
         background: '#111',
         border: borderStyle,
-        borderRadius: 4,
+        borderRadius: 2,
         boxShadow: selected
           ? `0 0 0 2px ${nodeAccent}30, 0 4px 24px rgba(0,0,0,0.7)`
           : '0 4px 24px rgba(0,0,0,0.5)',
@@ -308,7 +329,7 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
         minWidth={PREVIEW_W + 20}
         minHeight={PREVIEW_H + 80}
         color={nodeAccent}
-        handleStyle={{ width: 10, height: 10, borderRadius: 2, border: `2px solid ${nodeAccent}`, background: '#111' }}
+        handleStyle={{ width: 10, height: 10, borderRadius: 2, border: '2px solid white', background: '#111' }}
         lineStyle={{ display: 'none' }}
         onResize={(_, p) => {
           store.updateSketchDims(id, p.width, p.height - 80)
@@ -391,34 +412,32 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
 
       {/* Controls — icon-badge row */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px 6px' }} onClick={(e) => e.stopPropagation()}>
-        <button style={CTRL} onClick={() => store.updateSketchRunning(id, !data.isRunning)}
+        <CtrlButton onClick={() => store.updateSketchRunning(id, !data.isRunning)}
           title={data.isRunning ? 'Pause' : 'Play'} className="nodrag">
           <Icon name={data.isRunning ? 'pause' : 'play'} size={11} />
-        </button>
-        <button style={CTRL} onClick={() => store.reloadSketch(id)}
-          title="Reload" className="nodrag">
+        </CtrlButton>
+        <CtrlButton onClick={() => store.reloadSketch(id)} title="Reload" className="nodrag">
           <Icon name="restart" size={11} />
-        </button>
-        <button
-          style={store.activeCodeNodeId === id ? CTRL_ACTIVE : CTRL}
+        </CtrlButton>
+        <CtrlButton
+          active={store.activeCodeNodeId === id}
           onClick={() => store.setActiveCodeNodeId(store.activeCodeNodeId === id ? null : id)}
           title="Toggle code editor" className="nodrag">
           <Icon name="code-editor" size={11} />
-        </button>
-        <button
-          style={isBackground ? CTRL_ACTIVE : CTRL}
+        </CtrlButton>
+        <CtrlButton
+          active={isBackground}
           onClick={handleToggleBackground}
           title={isBackground ? 'Stop drawing behind canvas' : 'Draw behind canvas'} className="nodrag">
           <Icon name="display-background" size={11} />
-        </button>
-        <button style={CTRL} onClick={handleOpenInWindow}
-          title="Open in new window" className="nodrag">
+        </CtrlButton>
+        <CtrlButton onClick={handleOpenInWindow} title="Open in new window" className="nodrag">
           <Icon name="open-new-tab" size={11} />
-        </button>
-        <button style={{ ...CTRL, marginLeft: 'auto' }} onClick={handleMaximize}
-          title="Zoom to fit" className="nodrag">
+        </CtrlButton>
+        <CtrlButton onClick={handleMaximize} title="Zoom to fit" className="nodrag"
+          extraStyle={{ marginLeft: 'auto' }}>
           <Icon name="zoom-to-fit" size={11} />
-        </button>
+        </CtrlButton>
       </div>
 
       {/* Parameter sliders */}

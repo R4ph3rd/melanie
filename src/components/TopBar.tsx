@@ -3,7 +3,7 @@ import * as SelectPrimitive      from '@radix-ui/react-select'
 import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu'
 import * as PopoverPrimitive     from '@radix-ui/react-popover'
 import Icon from './ui/Icon'
-import { ChevronDown, Check } from 'lucide-react'
+import { ChevronDown, Checkmark } from '@carbon/icons-react'
 import { useStore } from '../store/store'
 import { PROVIDERS } from '../api/providers'
 import ModelConnectModal from './ModelConnectModal'
@@ -77,7 +77,7 @@ export default function TopBar() {
               >
                 <SelectPrimitive.Value />
                 <SelectPrimitive.Icon asChild>
-                  <ChevronDown className="h-3 w-3 opacity-50" />
+                  <ChevronDown size={12} className="opacity-50" />
                 </SelectPrimitive.Icon>
               </SelectPrimitive.Trigger>
 
@@ -107,7 +107,7 @@ export default function TopBar() {
                           >
                             <span className="absolute right-2 flex h-3.5 w-3.5 items-center justify-center">
                               <SelectPrimitive.ItemIndicator>
-                                <Check className="h-3.5 w-3.5" />
+                                <Checkmark size={14} />
                               </SelectPrimitive.ItemIndicator>
                             </span>
                             <SelectPrimitive.ItemText>{m.label}</SelectPrimitive.ItemText>
@@ -180,7 +180,7 @@ export default function TopBar() {
                 >
                   <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
                     <DropdownMenuPrimitive.ItemIndicator>
-                      <Check className="h-3.5 w-3.5" />
+                      <Checkmark size={14} />
                     </DropdownMenuPrimitive.ItemIndicator>
                   </span>
                   {label}
