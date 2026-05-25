@@ -15,13 +15,24 @@ import { buildRegionalEditMessages, getRegionalEditSystem } from '../../prompts'
 import SketchPreview from '../SketchPreview'
 import ParameterSliders from '../ParameterSliders'
 import SemanticAxes    from '../SemanticAxes'
-import { Button } from '../ui/button'
 import { Badge } from '../ui/badge'
 
 type SketchNodeType = Node<SketchNodeData, 'sketch'>
 
 const PREVIEW_W = 260
 const PREVIEW_H = 200
+
+// Shared icon-badge button style for node controls
+const CTRL: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+  width: 26, height: 26, padding: 0, borderRadius: 2, flexShrink: 0,
+  border: '2px solid #3a3a3a', background: 'transparent', color: '#606060',
+  cursor: 'pointer', transition: 'border-color 0.1s, color 0.1s',
+}
+const CTRL_ACTIVE: React.CSSProperties = {
+  ...CTRL, border: '2px solid #8C49DF', color: '#8C49DF',
+  background: 'rgba(140,73,223,0.12)',
+}
 
 const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<SketchNodeType>) {
   const [editingTitle, setEditingTitle] = useState(false)
@@ -274,85 +285,107 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
   else if (isParamDropTarget)
     overlayLabel = `Drop "${store.draggingParam!.param.semanticLabel || store.draggingParam!.param.label}"`
 
-  let borderStyle = selected ? '1.5px solid #7c3aed' : '1px solid #2a2a3a'
+  const nodeAccent = data.library === 'p5js' ? '#8C49DF' : '#3b82f6'
+
+  let borderStyle = selected ? `1.5px solid ${nodeAccent}` : '1px solid #2a2a2a'
   if (isMergingTarget)   borderStyle = '1.5px dashed #1d4ed8'
-  if (isToolbarOpTarget) borderStyle = '1.5px dashed #7c3aed'
+  if (isToolbarOpTarget) borderStyle = `1.5px dashed ${nodeAccent}`
   if (isParamDropTarget) borderStyle = '1.5px dashed #a78bfa'
 
   return (
     <div
       className="sketch-node"
       style={{
-        background: '#131825',
+        background: '#111',
         border: borderStyle,
-        borderRadius: 8,
+        borderRadius: 4,
         boxShadow: selected
-          ? '0 0 0 3px rgba(124,58,237,0.2), 0 4px 24px rgba(0,0,0,0.6)'
+          ? `0 0 0 2px ${nodeAccent}30, 0 4px 24px rgba(0,0,0,0.7)`
           : '0 4px 24px rgba(0,0,0,0.5)',
         minWidth: PREVIEW_W + 20,
-        width:    data.width,   // controlled by NodeResizer when set
+        width:    data.width,
         cursor:   isInteractiveTarget ? 'crosshair' : 'default',
       }}
       onClick={handleNodeClick}
     >
-      {/* Resize handles, visible on selection */}
       <NodeResizer
         isVisible={selected}
         minWidth={PREVIEW_W + 20}
         minHeight={PREVIEW_H + 80}
-        color="#7c3aed"
-        handleStyle={{ width: 8, height: 8, borderRadius: 2 }}
-        lineStyle={{ borderColor: 'rgba(124,58,237,0.4)' }}
+        color={nodeAccent}
+        handleStyle={{ width: 8, height: 8, borderRadius: 1 }}
+        lineStyle={{ borderColor: `${nodeAccent}50` }}
         onResize={(_, p) => {
-          // Live update so the preview tracks the cursor; the
-          // store re-render is cheap and only updates one node.
           store.updateSketchDims(id, p.width, p.height - 80)
         }}
       />
 
-      {/* Handles */}
-      <Handle type="target" position={Position.Left}  id="left"  style={{ background: '#7c3aed', width: 10, height: 10 }} />
-      <Handle type="source" position={Position.Right} id="right" style={{ background: '#7c3aed', width: 10, height: 10 }} />
+      {/* Handles — square for the glitch aesthetic */}
+      <Handle type="target" position={Position.Left}  id="left"  style={{ background: nodeAccent, width: 10, height: 10, borderRadius: 1 }} />
+      <Handle type="source" position={Position.Right} id="right" style={{ background: nodeAccent, width: 10, height: 10, borderRadius: 1 }} />
 
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-border">
-        {editingTitle ? (
-          <input
-            autoFocus
-            defaultValue={data.title}
-            onBlur={(e)    => { store.updateSketchTitle(id, e.target.value); setEditingTitle(false) }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') { store.updateSketchTitle(id, e.currentTarget.value); setEditingTitle(false) }
-            }}
-            className="bg-surface3 text-text-primary text-sm font-medium rounded px-1 w-32 outline-none border border-accent nodrag"
-            onClick={(e) => e.stopPropagation()}
-          />
-        ) : (
-          <span
-            className="text-sm font-medium text-text-primary cursor-pointer hover:text-accent"
-            onDoubleClick={() => setEditingTitle(true)}
-          >
-            {data.title}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '5px 8px',
+        borderBottom: '1px solid #222',
+        background: 'rgba(0,0,0,0.25)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+          {/* Glitch icon badge */}
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            width: 20, height: 20, flexShrink: 0,
+            border: `2px solid ${nodeAccent}`,
+            borderRadius: 2,
+            color: nodeAccent,
+            fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700,
+          }}>
+            {data.library === 'p5js' ? '⌨' : '⬡'}
           </span>
-        )}
-        <div className="flex items-center gap-1">
-          <Badge variant={data.library === 'p5js' ? 'p5' : 'threejs'} className="rounded">
+          {editingTitle ? (
+            <input
+              autoFocus
+              defaultValue={data.title}
+              onBlur={(e)    => { store.updateSketchTitle(id, e.target.value); setEditingTitle(false) }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') { store.updateSketchTitle(id, e.currentTarget.value); setEditingTitle(false) }
+              }}
+              style={{
+                background: '#1a1a1a', border: `1px solid ${nodeAccent}`,
+                borderRadius: 2, padding: '1px 5px', width: 120,
+                color: '#f0f0f0', fontSize: 11, fontWeight: 600,
+                fontFamily: 'var(--font-sans)', outline: 'none',
+              }}
+              className="nodrag"
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <span
+              style={{ fontSize: 11, fontWeight: 600, color: '#d0d0d0', letterSpacing: '-0.01em', cursor: 'pointer' }}
+              onDoubleClick={() => setEditingTitle(true)}
+            >
+              {data.title}
+            </span>
+          )}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+          <Badge variant={data.library === 'p5js' ? 'p5' : 'threejs'} className="rounded-sm">
             {data.library === 'p5js' ? 'p5' : '3js'}
           </Badge>
-          <Button
-            variant="ghost"
-            size="icon"
+          <button
+            style={{ ...CTRL, width: 20, height: 20, border: '1px solid #2a2a2a' }}
             onClick={(e) => { e.stopPropagation(); store.deleteNode(id) }}
-            className="h-5 w-5 text-muted-foreground hover:text-error"
             title="Delete node"
+            className="nodrag"
           >
-            <FontAwesomeIcon icon={faXmark} />
-          </Button>
+            <FontAwesomeIcon icon={faXmark} style={{ width: 9, height: 9 }} />
+          </button>
         </div>
       </div>
 
       {/* Preview */}
-      <div className="relative" style={{ width: previewW + 20, height: previewH + 10, padding: '5px 10px' }}>
+      <div style={{ width: previewW + 20, height: previewH + 10, padding: '5px 10px' }}>
         {data.code ? (
           <SketchPreview
             code={data.code}
@@ -365,78 +398,43 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
         ) : (
           <div
             className="flex items-center justify-center text-text-muted text-sm"
-            style={{ width: previewW, height: previewH, background: '#0d0d15', borderRadius: 4 }}
+            style={{ width: previewW, height: previewH, background: '#0a0a0a', borderRadius: 2 }}
           >
             <span className="animate-pulse">Waiting for generation…</span>
           </div>
         )}
       </div>
 
-      {/* Controls */}
-      <div className="flex items-center gap-1 px-3 pb-2" onClick={(e) => e.stopPropagation()}>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => store.updateSketchRunning(id, !data.isRunning)}
-          className="text-text-secondary hover:text-text-primary px-2"
-          title={data.isRunning ? 'Pause' : 'Play'}
-        >
-          <FontAwesomeIcon icon={data.isRunning ? faPause : faPlay} />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => store.reloadSketch(id)}
-          className="text-text-secondary hover:text-text-primary px-2"
-          title="Reload"
-        >
-          <FontAwesomeIcon icon={faRotateRight} />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
+      {/* Controls — icon-badge row */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px 6px' }} onClick={(e) => e.stopPropagation()}>
+        <button style={CTRL} onClick={() => store.updateSketchRunning(id, !data.isRunning)}
+          title={data.isRunning ? 'Pause' : 'Play'} className="nodrag">
+          <FontAwesomeIcon icon={data.isRunning ? faPause : faPlay} style={{ width: 11, height: 11 }} />
+        </button>
+        <button style={CTRL} onClick={() => store.reloadSketch(id)}
+          title="Reload" className="nodrag">
+          <FontAwesomeIcon icon={faRotateRight} style={{ width: 11, height: 11 }} />
+        </button>
+        <button
+          style={store.activeCodeNodeId === id ? CTRL_ACTIVE : CTRL}
           onClick={() => store.setActiveCodeNodeId(store.activeCodeNodeId === id ? null : id)}
-          className="px-2 flex items-center gap-1.5"
-          style={{
-            color:      store.activeCodeNodeId === id ? '#7c3aed' : '#a0a0a0',
-            background: store.activeCodeNodeId === id ? 'rgba(124,58,237,0.15)' : 'transparent',
-          }}
-          title="Toggle code editor"
-        >
-          <FontAwesomeIcon icon={faCode} />
-          {store.activeCodeNodeId === id ? 'Hide Code' : 'Code'}
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
+          title="Toggle code editor" className="nodrag">
+          <FontAwesomeIcon icon={faCode} style={{ width: 11, height: 11 }} />
+        </button>
+        <button
+          style={isBackground ? CTRL_ACTIVE : CTRL}
           onClick={handleToggleBackground}
-          className="px-2"
-          style={{
-            color:      isBackground ? '#7c3aed' : '#a0a0a0',
-            background: isBackground ? 'rgba(124,58,237,0.15)' : 'transparent',
-          }}
-          title={isBackground ? 'Stop drawing this sketch behind the canvas' : 'Draw this sketch behind the canvas'}
-        >
-          <FontAwesomeIcon icon={faImage} />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleOpenInWindow}
-          className="text-text-secondary hover:text-text-primary px-2"
-          title="Open sketch in new window"
-        >
-          <FontAwesomeIcon icon={faUpRightFromSquare} />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleMaximize}
-          className="ml-auto text-text-secondary hover:text-text-primary px-2"
-          title="Zoom to fit this node"
-        >
-          <FontAwesomeIcon icon={faExpand} />
-        </Button>
+          title={isBackground ? 'Stop drawing behind canvas' : 'Draw behind canvas'} className="nodrag">
+          <FontAwesomeIcon icon={faImage} style={{ width: 11, height: 11 }} />
+        </button>
+        <button style={CTRL} onClick={handleOpenInWindow}
+          title="Open in new window" className="nodrag">
+          <FontAwesomeIcon icon={faUpRightFromSquare} style={{ width: 11, height: 11 }} />
+        </button>
+        <button style={{ ...CTRL, marginLeft: 'auto' }} onClick={handleMaximize}
+          title="Zoom to fit" className="nodrag">
+          <FontAwesomeIcon icon={faExpand} style={{ width: 11, height: 11 }} />
+        </button>
       </div>
 
       {/* Parameter sliders */}
@@ -454,15 +452,15 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
           className="absolute inset-0 flex items-center justify-center rounded-lg text-sm font-medium"
           style={{ cursor: 'crosshair',
             background: isParamDropTarget
-              ? 'rgba(124,58,237,0.12)'
+              ? 'rgba(140,73,223,0.1)'
               : isMergingTarget
-              ? 'rgba(29,78,216,0.12)'
-              : 'rgba(124,58,237,0.08)',
+              ? 'rgba(29,78,216,0.1)'
+              : 'rgba(140,73,223,0.07)',
             color: isParamDropTarget ? '#a78bfa' : isMergingTarget ? '#60a5fa' : '#c084fc',
           }}
           onClick={(e) => { e.stopPropagation(); handleNodeClick() }}
         >
-          <div className="flex items-center gap-2 bg-black/40 px-3 py-1.5 rounded-full backdrop-blur-sm">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(0,0,0,0.55)', padding: '6px 14px', borderRadius: 3, backdropFilter: 'blur(4px)' }}>
             {isParamDropTarget && <FontAwesomeIcon icon={faArrowRightArrowLeft} />}
             {isMergingTarget && (store.pendingOpType === 'diff'
               ? <FontAwesomeIcon icon={faCodeBranch} />

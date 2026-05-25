@@ -99,16 +99,16 @@ export default function App() {
               width:      5,
               flexShrink: 0,
               cursor:     'col-resize',
-              background: isDragging ? 'rgba(124,58,237,0.7)' : '#2a2a3a',
+              background: isDragging ? 'rgba(140,73,223,0.7)' : '#2a2a2a',
               transition: isDragging ? 'none' : 'background 0.15s',
             }}
             onMouseEnter={(e) => {
               if (!dragging.current)
-                (e.currentTarget as HTMLDivElement).style.background = 'rgba(124,58,237,0.45)'
+                (e.currentTarget as HTMLDivElement).style.background = 'rgba(140,73,223,0.45)'
             }}
             onMouseLeave={(e) => {
               if (!dragging.current)
-                (e.currentTarget as HTMLDivElement).style.background = '#2a2a3a'
+                (e.currentTarget as HTMLDivElement).style.background = '#2a2a2a'
             }}
           />
         )}

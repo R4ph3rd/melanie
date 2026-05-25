@@ -6,20 +6,20 @@
     --card-foreground: 0 0% 94%;
     --popover: 240 14% 10%;
     --popover-foreground: 0 0% 94%;
-    --primary: 263 66% 57%;
+    --primary: 267 70% 58%;        /* #8C49DF */
     --primary-foreground: 0 0% 100%;
     --secondary: 240 7% 15%;
     --secondary-foreground: 0 0% 63%;
     --muted: 240 10% 12%;
     --muted-foreground: 0 0% 38%;
-    --accent: 263 56% 30%;
+    --accent: 267 56% 30%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 73% 58%;
     --destructive-foreground: 0 0% 100%;
     --border: 0 0% 20%;
     --input: 240 11% 11%;
-    --ring: 263 66% 57%;
-    --radius: 0.5rem;
+    --ring: 267 70% 58%;           /* #8C49DF */
+    --radius: 0.25rem;             /* 4px – sharper corners */
   }
 }
 
@@ -29,6 +29,7 @@
 
 /* ── Design system CSS custom properties ── */
 :root {
+  /* Surfaces */
   --color-bg:             #080808;
   --color-surface:        #111111;
   --color-surface2:       #1a1a1a;
@@ -36,11 +37,28 @@
   --color-surface4:       #2a2a2a;
   --color-border:         #333333;
   --color-border-bright:  #444444;
+
+  /* Text */
   --color-text-primary:   #f0f0f0;
   --color-text-secondary: #a0a0a0;
   --color-text-muted:     #606060;
-  --color-accent:         #7c3aed;
-  --color-accent-hover:   #6d28d9;
+
+  /* Accent */
+  --color-accent:         #8C49DF;
+  --color-accent-hover:   #7B38CE;
+  --color-accent-dim:     #2E1A5F;
+  --color-accent-soft:    rgba(140, 73, 223, 0.12);
+  --color-accent-glow:    rgba(140, 73, 223, 0.35);
+
+  /* Typography */
+  --font-sans: 'Space Grotesk', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* Radii – sharp/glitchy */
+  --radius-sm:  2px;
+  --radius-md:  3px;
+  --radius-lg:  6px;
+  --radius-xl:  10px;
 }
 
 /* ── Global reset ── */
@@ -54,20 +72,49 @@ html, body, #root {
   overflow: hidden;
   background: var(--color-bg);
   color: var(--color-text-primary);
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: var(--font-sans);
   font-size: 13px;
   -webkit-font-smoothing: antialiased;
+}
+
+/* ── Icon badge — glitch-bordered icon container ── */
+.icon-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--color-border-bright);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  transition: border-color 0.1s ease, color 0.1s ease, background-color 0.1s ease;
+  cursor: pointer;
+  user-select: none;
+  background: transparent;
+  flex-shrink: 0;
+}
+.icon-badge:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+.icon-badge.active,
+.icon-badge[data-active="true"] {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
 }
 
 /* ── Custom scrollbar ── */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #2a2a3a; border-radius: 4px; }
+::-webkit-scrollbar-thumb { background: #2a2a3a; border-radius: 2px; }
 ::-webkit-scrollbar-thumb:hover { background: #3a3a4a; }
 
 /* ── ReactFlow overrides ── */
 .react-flow__background { background: #080808 !important; }
-.react-flow__controls { background: #111118 !important; border-color: #2a2a3a !important; }
+.react-flow__controls { background: #111118 !important; border-color: #2a2a3a !important; border-radius: 3px !important; }
 .react-flow__controls button {
   background: #111118 !important;
   border-color: #2a2a3a !important;
@@ -80,7 +127,7 @@ html, body, #root {
   fill: #f0f0f0 !important;
 }
 .react-flow__minimap { background: #0e0e16 !important; }
-.react-flow__edge-path { stroke: #4a4a6a; }
+.react-flow__edge-path { stroke: #3a3a5a; }
 .react-flow__handle { cursor: pointer !important; }
 
 /* ── Range input styling ── */
@@ -96,7 +143,7 @@ input[type='range']::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 12px;
   height: 12px;
-  background: #7c3aed;
+  background: var(--color-accent);
   border-radius: 50%;
   cursor: pointer;
   border: 2px solid #0e0e14;
@@ -104,7 +151,7 @@ input[type='range']::-webkit-slider-thumb {
 input[type='range']::-moz-range-thumb {
   width: 12px;
   height: 12px;
-  background: #7c3aed;
+  background: var(--color-accent);
   border-radius: 50%;
   cursor: pointer;
   border: 2px solid #0e0e14;
@@ -116,7 +163,6 @@ textarea {
   background-color: hsl(var(--input));
   color: hsl(var(--foreground));
 }
-/* Suppress browser autofill yellow/white override */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus,
@@ -133,4 +179,4 @@ input:-webkit-autofill:active {
 
 /* ── Code panel CodeMirror overrides ── */
 .cm-editor { height: 100%; }
-.cm-editor .cm-scroller { font-family: 'JetBrains Mono', 'Fira Code', monospace !important; }
+.cm-editor .cm-scroller { font-family: var(--font-mono) !important; }

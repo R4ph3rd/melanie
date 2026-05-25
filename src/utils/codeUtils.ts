@@ -155,18 +155,18 @@ export function buildSketchPopupHtml(code: string, library: LibraryType, title: 
 <title>${title.replace(/[<>&"]/g, '')} — sketch</title>
 <style>
   *,*::before,*::after{box-sizing:border-box}
-  html,body{margin:0;padding:0;height:100%;background:#080808;color:#f0f0f0;font-family:'Inter',system-ui,sans-serif;font-size:13px;overflow:hidden}
+  html,body{margin:0;padding:0;height:100%;background:#080808;color:#f0f0f0;font-family:'Space Grotesk',system-ui,sans-serif;font-size:13px;overflow:hidden}
   #wrap{display:flex;height:100%}
   #toolbar{width:48px;flex-shrink:0;background:#0c0c14;border-right:1px solid #222;display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:8px}
   .tool-btn{width:34px;height:34px;border-radius:6px;border:1px solid transparent;background:transparent;color:#a0a0a0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .12s}
   .tool-btn:hover{background:#1e1e2e;color:#f0f0f0}
-  .tool-btn.active{background:rgba(124,58,237,0.18);border-color:#7c3aed;color:#7c3aed}
+  .tool-btn.active{background:rgba(140,73,223,0.18);border-color:#8C49DF;color:#8C49DF}
   .tool-btn svg{width:18px;height:18px}
   #stage{flex:1;position:relative;background:#080808}
   #stage iframe{width:100%;height:100%;border:0;display:block;background:#111}
   #overlay{position:absolute;inset:0;cursor:default;pointer-events:none}
   #overlay.active{cursor:crosshair;pointer-events:auto;background:rgba(0,0,0,0.05)}
-  #selrect{position:absolute;border:1.5px dashed #7c3aed;background:rgba(124,58,237,0.12);display:none;pointer-events:none}
+  #selrect{position:absolute;border:1.5px dashed #8C49DF;background:rgba(140,73,223,0.12);display:none;pointer-events:none}
   #status{position:absolute;top:8px;left:8px;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);padding:4px 10px;border-radius:999px;font-size:11px;color:#c084fc;display:none}
   #status.show{display:block}
   /* Dialog */
@@ -176,16 +176,16 @@ export function buildSketchPopupHtml(code: string, library: LibraryType, title: 
   .modal h3{margin:0 0 4px;font-size:14px;font-weight:600}
   .modal p{margin:0 0 14px;font-size:11px;color:#888}
   .modal textarea{width:100%;min-height:80px;background:hsl(240 11% 11%);color:#f0f0f0;border:1px solid #2a2a3a;border-radius:6px;padding:8px 10px;font-size:12px;font-family:inherit;resize:vertical;outline:none}
-  .modal textarea:focus{border-color:#7c3aed}
+  .modal textarea:focus{border-color:#8C49DF}
   .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
   .btn{padding:6px 14px;border-radius:6px;border:1px solid #2a2a3a;background:transparent;color:#a0a0a0;cursor:pointer;font-size:12px;font-family:inherit;transition:all .12s}
   .btn:hover{color:#f0f0f0;background:#1e1e2e}
-  .btn-primary{background:#7c3aed;border-color:#7c3aed;color:#fff}
-  .btn-primary:hover{background:#6d28d9;border-color:#6d28d9;color:#fff}
+  .btn-primary{background:#8C49DF;border-color:#8C49DF;color:#fff}
+  .btn-primary:hover{background:#7B38CE;border-color:#7B38CE;color:#fff}
   .btn-primary:disabled{opacity:.5;cursor:not-allowed}
   #busy{position:absolute;inset:0;background:rgba(8,8,16,0.6);backdrop-filter:blur(2px);display:none;align-items:center;justify-content:center;z-index:50;color:#c084fc;font-size:12px}
   #busy.show{display:flex}
-  #busy .spinner{width:14px;height:14px;border:2px solid rgba(124,58,237,0.3);border-top-color:#7c3aed;border-radius:50%;animation:sp 1s linear infinite;margin-right:8px}
+  #busy .spinner{width:14px;height:14px;border:2px solid rgba(140,73,223,0.3);border-top-color:#8C49DF;border-radius:50%;animation:sp 1s linear infinite;margin-right:8px}
   @keyframes sp{to{transform:rotate(360deg)}}
 </style>
 </head><body>

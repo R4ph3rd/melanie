@@ -78,7 +78,7 @@ const ParameterSliders = memo(function ParameterSliders({ nodeId, params }: Prop
                 minWidth:   80,
                 maxWidth:   80,
                 color:      pickingUp ? '#a78bfa' : '#666',
-                background: pickingUp ? 'rgba(124,58,237,0.15)' : 'transparent',
+                background: pickingUp ? 'rgba(140,73,223,0.15)' : 'transparent',
                 borderRadius: 3,
                 padding:    '1px 3px',
                 cursor:     'pointer',
@@ -126,7 +126,7 @@ const ParameterSliders = memo(function ParameterSliders({ nodeId, params }: Prop
                 style={{
                   width:      48,
                   background: '#1a1a2e',
-                  border:     '1px solid #7c3aed',
+                  border:     '1px solid #8C49DF',
                   color:      '#f0f0f0',
                   padding:    '1px 3px',
                 }}

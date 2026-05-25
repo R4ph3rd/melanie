@@ -19,10 +19,11 @@ export default {
         'text-muted':     '#606060',
         'text-disabled':  '#404040',
 
-        // Accent : primary (purple)
-        accent:         '#7c3aed',
-        'accent-hover': '#6d28d9',
-        'accent-dim':   '#3b1f6e',
+        // Accent: #8C49DF violet
+        accent:         '#8C49DF',
+        'accent-hover': '#7B38CE',
+        'accent-dim':   '#2E1A5F',
+        'accent-soft':  'rgba(140,73,223,0.12)',
 
         // Node type colours
         'node-sketch':   '#1a1f2e',
@@ -32,7 +33,7 @@ export default {
         'node-extract':  '#1f1a0e',
 
         // Operation type accent colours
-        'op-modify':    '#7c3aed',
+        'op-modify':    '#8C49DF',
         'op-duplicate': '#374151',
         'op-merge':     '#1d4ed8',
         'op-diff':      '#047857',
@@ -76,7 +77,7 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['Space Grotesk', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
       },
       fontSize: {
@@ -88,24 +89,24 @@ export default {
         lg:    ['16px', '24px'],
       },
       borderRadius: {
-        sm:      'calc(var(--radius) - 4px)',
-        DEFAULT: '6px',
-        md:      'calc(var(--radius) - 2px)',
-        lg:      'var(--radius)',
-        xl:      '16px',
+        sm:      '2px',
+        DEFAULT: '3px',
+        md:      '4px',
+        lg:      '6px',
+        xl:      '10px',
       },
       boxShadow: {
-        'node':    '0 4px 24px rgba(0,0,0,0.6)',
-        'node-active': '0 0 0 2px #7c3aed, 0 4px 24px rgba(0,0,0,0.6)',
-        'panel':   '4px 0 24px rgba(0,0,0,0.5)',
-        'popup':   '0 8px 32px rgba(0,0,0,0.7)',
-        'glow':    '0 0 12px rgba(124,58,237,0.4)',
+        'node':        '0 4px 24px rgba(0,0,0,0.6)',
+        'node-active': '0 0 0 2px #8C49DF, 0 4px 24px rgba(0,0,0,0.6)',
+        'panel':       '4px 0 24px rgba(0,0,0,0.5)',
+        'popup':       '0 8px 32px rgba(0,0,0,0.7)',
+        'glow':        '0 0 12px rgba(140,73,223,0.4)',
       },
       animation: {
-        'spin-slow': 'spin 2s linear infinite',
+        'spin-slow':  'spin 2s linear infinite',
         'pulse-glow': 'pulse 2s ease-in-out infinite',
-        'slide-in':  'slideIn 0.2s ease-out',
-        'fade-in':   'fadeIn 0.15s ease-out',
+        'slide-in':   'slideIn 0.2s ease-out',
+        'fade-in':    'fadeIn 0.15s ease-out',
       },
       keyframes: {
         slideIn: {

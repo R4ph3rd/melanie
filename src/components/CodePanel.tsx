@@ -63,45 +63,59 @@ export default function CodePanel({ nodeId, onClose }: Props) {
   return (
     <div
       className="flex flex-col h-full"
-      style={{ background: '#0e0e14', borderRight: '1px solid #2a2a3a' }}
+      style={{ background: '#0c0c0c', borderRight: '1px solid #1e1e1e' }}
     >
       {/* Panel header */}
       <div
-        className="flex items-center justify-between px-4 py-2 flex-shrink-0"
-        style={{ borderBottom: '1px solid #2a2a3a', background: '#111118' }}
+        className="flex items-center justify-between flex-shrink-0"
+        style={{ padding: '5px 10px', borderBottom: '1px solid #1e1e1e', background: '#111' }}
       >
-        <div className="flex items-center gap-2">
-          <span className="text-muted-foreground text-xs font-mono">{'</>'}</span>
-          <span className="text-sm font-medium text-foreground">{data.title}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            width: 22, height: 22, border: '2px solid #444', borderRadius: 2,
+            fontFamily: 'var(--font-mono)', fontSize: 10, color: '#606060',
+          }}>
+            {'</>'}
+          </span>
+          <span style={{ fontSize: 12, fontWeight: 600, color: '#d0d0d0' }}>{data.title}</span>
           {dirty && (
-            <Badge variant="outline" className="text-warning border-warning/30 text-[10px]">
+            <Badge variant="outline" className="text-warning border-warning/30 text-[10px] rounded-sm">
               unsaved
             </Badge>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          <Button
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <button
             onClick={applyCode}
-            variant={dirty ? 'default' : 'ghost'}
-            size="sm"
-            className={dirty ? '' : 'text-muted-foreground border border-border'}
             title="Apply changes (Ctrl+Enter)"
+            style={{
+              padding: '3px 10px',
+              border: dirty ? '1px solid #8C49DF' : '1px solid #333',
+              borderRadius: 2,
+              background: dirty ? 'rgba(140,73,223,0.15)' : 'transparent',
+              color: dirty ? '#8C49DF' : '#555',
+              fontFamily: 'var(--font-sans)', fontSize: 11, fontWeight: 600,
+              cursor: 'pointer', transition: 'all 0.1s',
+            }}
           >
             Apply ↵
-          </Button>
-          <Button
+          </button>
+          <button
             onClick={onClose}
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 text-muted-foreground hover:text-foreground"
+            style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              width: 22, height: 22, border: '1px solid #2a2a2a', borderRadius: 2,
+              background: 'transparent', color: '#555', cursor: 'pointer',
+            }}
           >
-            <X className="h-3.5 w-3.5" />
-          </Button>
+            <X className="h-3 w-3" />
+          </button>
         </div>
       </div>
 
       {/* Library badge */}
-      <div className="px-4 py-1.5 flex items-center gap-2 flex-shrink-0" style={{ borderBottom: '1px solid #1e1e2a' }}>
+      <div className="px-3 py-1.5 flex items-center gap-2 flex-shrink-0" style={{ borderBottom: '1px solid #1a1a1a' }}>
         <Badge variant={data.library === 'p5js' ? 'p5' : 'threejs'}>
           {data.library === 'p5js' ? 'p5.js' : 'three.js'}
         </Badge>

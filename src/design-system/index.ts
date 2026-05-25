@@ -16,9 +16,10 @@ export const colors = {
   textMuted:     '#606060',
   textDisabled:  '#404040',
 
-  accent:      '#7c3aed',
-  accentHover: '#6d28d9',
-  accentDim:   '#3b1f6e',
+  accent:      '#8C49DF',
+  accentHover: '#7B38CE',
+  accentDim:   '#2E1A5F',
+  accentSoft:  'rgba(140, 73, 223, 0.12)',
 
   nodeSketch:   '#1a1f2e',
   nodeOperator: '#1c1428',
@@ -26,7 +27,7 @@ export const colors = {
   nodeDiff:     '#0f1f18',
   nodeExtract:  '#1f1a0e',
 
-  opModify:    '#7c3aed',
+  opModify:    '#8C49DF',
   opDuplicate: '#374151',
   opMerge:     '#1d4ed8',
   opDiff:      '#047857',
@@ -55,14 +56,14 @@ export const spacing = {
 } as const
 
 export const radii = {
-  sm: '4px',
-  md: '6px',
-  lg: '8px',
-  xl: '12px',
+  sm: '2px',
+  md: '3px',
+  lg: '6px',
+  xl: '10px',
 } as const
 
 export const typography = {
-  fontSans: '"Inter", system-ui, sans-serif',
+  fontSans: '"Space Grotesk", system-ui, sans-serif',
   fontMono: '"JetBrains Mono", "Fira Code", monospace',
   size2xs: '10px',
   sizeXs:  '11px',

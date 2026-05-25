@@ -8,7 +8,6 @@ import { ChevronDown, Check } from 'lucide-react'
 import { useStore } from '../store/store'
 import { PROVIDERS } from '../api/providers'
 import ModelConnectModal from './ModelConnectModal'
-import { Button } from './ui/button'
 
 // ── Shared Tailwind strings ────────────────────────────────────────────────────
 const dropdownContentCls =
@@ -39,18 +38,19 @@ export default function TopBar() {
     <>
       <header
         className="flex items-center gap-3 px-4 flex-shrink-0"
-        style={{ height: 48, background: '#0c0c14', borderBottom: '1px solid #222', zIndex: 100 }}
+        style={{ height: 44, background: '#0c0c0c', borderBottom: '1px solid #1e1e1e', zIndex: 100 }}
       >
-        {/* Logo */}
-        <div
-          className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
-          style={{ background: '#1e1e2e', border: '1px solid #333' }}
-        >
-          <span className="text-xs" style={{ color: '#7c3aed' }}>✦</span>
+        {/* Logo — square glitch badge */}
+        <div style={{
+          width: 28, height: 28, flexShrink: 0,
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          background: '#111', border: '2px solid #8C49DF', borderRadius: 2,
+        }}>
+          <span style={{ color: '#8C49DF', fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 700 }}>✦</span>
         </div>
 
-        <span className="text-sm font-semibold text-text-primary tracking-tight select-none">melanie</span>
-        <span className="text-xs text-text-muted hidden sm:block">node-based assisted creative coding</span>
+        <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '-0.02em', userSelect: 'none', color: '#e0e0e0' }}>melanie</span>
+        <span style={{ fontSize: 11, color: '#404040' }} className="hidden sm:block">node-based creative coding</span>
 
         <div className="flex-1" />
 
@@ -130,25 +130,38 @@ export default function TopBar() {
         )}
 
         {/* Connect Models */}
-        <Button
+        <button
           onClick={() => setShowModal(true)}
-          variant={hasKey ? 'outline' : 'default'}
-          size="sm"
-          className={hasKey
-            ? 'text-muted-foreground border-border/50'
-            : 'bg-primary/15 text-primary border border-primary/50 hover:bg-primary/25'
-          }
+          title="Connect AI models"
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '4px 10px',
+            border: hasKey ? '1px solid #333' : '1px solid #8C49DF',
+            borderRadius: 2,
+            background: hasKey ? 'transparent' : 'rgba(140,73,223,0.15)',
+            color: hasKey ? '#606060' : '#8C49DF',
+            fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 500,
+            cursor: 'pointer', transition: 'all 0.1s', whiteSpace: 'nowrap',
+          }}
         >
-          <FontAwesomeIcon icon={faPlug} />
-          Connect Models
-        </Button>
+          <FontAwesomeIcon icon={faPlug} style={{ width: 11, height: 11 }} />
+          {hasKey ? 'Models' : 'Connect'}
+        </button>
 
         {/* Options dropdown */}
         <DropdownMenuPrimitive.Root>
           <DropdownMenuPrimitive.Trigger asChild>
-            <Button variant="ghost" size="icon" title="Options" className="text-text-muted hover:text-text-primary">
-              <FontAwesomeIcon icon={faGear} />
-            </Button>
+            <button title="Options" style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              width: 28, height: 28, border: '2px solid #333', borderRadius: 2,
+              background: 'transparent', color: '#555', cursor: 'pointer',
+              transition: 'all 0.1s',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#8C49DF'; e.currentTarget.style.color = '#8C49DF' }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#333'; e.currentTarget.style.color = '#555' }}
+            >
+              <FontAwesomeIcon icon={faGear} style={{ width: 12, height: 12 }} />
+            </button>
           </DropdownMenuPrimitive.Trigger>
           <DropdownMenuPrimitive.Portal>
             <DropdownMenuPrimitive.Content
@@ -181,9 +194,17 @@ export default function TopBar() {
         {/* Help popover */}
         <PopoverPrimitive.Root open={helpOpen} onOpenChange={setHelpOpen}>
           <PopoverPrimitive.Trigger asChild>
-            <Button variant="ghost" size="icon" title="Help" className="text-text-muted hover:text-text-primary">
-              <FontAwesomeIcon icon={faCircleQuestion} />
-            </Button>
+            <button title="Help" style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              width: 28, height: 28, border: '2px solid #333', borderRadius: 2,
+              background: 'transparent', color: '#555', cursor: 'pointer',
+              transition: 'all 0.1s',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#8C49DF'; e.currentTarget.style.color = '#8C49DF' }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#333'; e.currentTarget.style.color = '#555' }}
+            >
+              <FontAwesomeIcon icon={faCircleQuestion} style={{ width: 12, height: 12 }} />
+            </button>
           </PopoverPrimitive.Trigger>
           <PopoverPrimitive.Portal>
             <PopoverPrimitive.Content

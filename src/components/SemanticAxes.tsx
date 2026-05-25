@@ -161,8 +161,8 @@ const SemanticAxes = memo(function SemanticAxes({ nodeId }: Props) {
           className="w-full flex items-center justify-center gap-2 text-xs py-1.5 rounded transition-colors"
           style={{
             color:      discoverLoading ? '#888' : '#a78bfa',
-            background: 'rgba(124,58,237,0.08)',
-            border:     '1px dashed rgba(124,58,237,0.3)',
+            background: 'rgba(140,73,223,0.08)',
+            border:     '1px dashed rgba(140,73,223,0.3)',
             cursor:     discoverLoading ? 'wait' : 'pointer',
           }}
           title="Ask the LLM to propose 3-4 aesthetic axes for this sketch"
@@ -232,7 +232,7 @@ const SemanticAxes = memo(function SemanticAxes({ nodeId }: Props) {
             onChange={(e) => handleScrub(a.id, parseFloat(e.target.value))}
             onPointerDown={(e) => e.stopPropagation()}
             className="w-full h-1 cursor-pointer nodrag nopan"
-            style={{ accentColor: '#7c3aed' }}
+            style={{ accentColor: '#8C49DF' }}
           />
         </div>
       ))}

@@ -75,8 +75,8 @@ export default function ModelConnectModal({ onClose }: Props) {
                     key={provider.id}
                     className="rounded-lg border p-4"
                     style={{
-                      borderColor: isActive ? 'rgba(124,58,237,0.4)' : '#2a2a3a',
-                      background:  isActive ? 'rgba(124,58,237,0.05)' : '#111118',
+                      borderColor: isActive ? 'rgba(140,73,223,0.4)' : '#2a2a2a',
+                      background:  isActive ? 'rgba(140,73,223,0.05)' : '#111',
                     }}
                   >
                     {/* Provider header */}

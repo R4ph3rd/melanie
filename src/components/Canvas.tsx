@@ -61,7 +61,7 @@ interface OpMenuEntry {
 }
 
 const CONN_OPS: OpMenuEntry[] = [
-  { type: 'modify',    label: 'Modify',    icon: faMagicWandSparkles, color: '#7c3aed' },
+  { type: 'modify',    label: 'Modify',    icon: faMagicWandSparkles, color: '#8C49DF' },
   { type: 'extract',   label: 'Extract',   icon: faScissors,          color: '#b45309' },
   { type: 'duplicate', label: 'Duplicate', icon: faClone,             color: '#4b5563' },
   { type: 'merge',     label: 'Merge',     icon: faCodeMerge,         color: '#1d4ed8' },

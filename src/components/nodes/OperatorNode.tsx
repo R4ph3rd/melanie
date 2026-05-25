@@ -40,7 +40,7 @@ type OperatorNodeType = Node<OperatorNodeData, 'operator'>
 interface Meta { icon: IconDefinition; label: string; color: string }
 
 const OP_META: Record<OperatorType, Meta> = {
-  modify:    { icon: faMagicWandSparkles, label: 'Modify',    color: '#7c3aed' },
+  modify:    { icon: faMagicWandSparkles, label: 'Modify',    color: '#8C49DF' },
   duplicate: { icon: faClone,             label: 'Duplicate', color: '#4b5563' },
   merge:     { icon: faCodeMerge,         label: 'Merge',     color: '#1d4ed8' },
   diff:      { icon: faCodeBranch,        label: 'Diff',      color: '#047857' },
@@ -286,47 +286,67 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
   return (
     <div
       style={{
-        background: '#131320',
-        border: selected ? `1.5px solid ${borderColor}` : '1px solid #2a2a3a',
-        borderRadius: 8,
+        background: '#111',
+        border: selected ? `1.5px solid ${borderColor}` : '1px solid #2a2a2a',
+        borderRadius: 4,
         minWidth: 240,
         maxWidth: 280,
-        boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+        boxShadow: selected
+          ? `0 0 0 2px ${borderColor}25, 0 4px 20px rgba(0,0,0,0.6)`
+          : '0 4px 20px rgba(0,0,0,0.5)',
       }}
     >
-      <Handle type="target" position={Position.Left}  id="left"  style={{ background: borderColor, width: 10, height: 10 }} />
-      <Handle type="source" position={Position.Right} id="right" style={{ background: borderColor, width: 10, height: 10 }} />
+      <Handle type="target" position={Position.Left}  id="left"  style={{ background: borderColor, width: 10, height: 10, borderRadius: 1 }} />
+      <Handle type="source" position={Position.Right} id="right" style={{ background: borderColor, width: 10, height: 10, borderRadius: 1 }} />
 
       {/* Header */}
-      <div
-        className="flex items-center justify-between px-3 py-2 rounded-t-lg"
-        style={{ borderBottom: '1px solid #2a2a3a', background: 'rgba(0,0,0,0.3)' }}
-      >
-        <span className="flex items-center gap-1.5 text-sm font-semibold" style={{ color: borderColor }}>
-          <FontAwesomeIcon icon={meta.icon} className="w-3.5" />
-          <span>{meta.label}</span>
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '5px 8px',
+        borderBottom: '1px solid #222',
+        background: 'rgba(0,0,0,0.3)',
+      }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: borderColor }}>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            width: 22, height: 22, flexShrink: 0,
+            border: `2px solid ${borderColor}`,
+            borderRadius: 2,
+          }}>
+            <FontAwesomeIcon icon={meta.icon} style={{ width: 10, height: 10 }} />
+          </span>
+          <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+            {meta.label}
+          </span>
         </span>
-        <div className="flex items-center gap-1.5">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           {data.isGenerating && (
-            <span className="text-xs text-muted-foreground animate-pulse">generating…</span>
+            <span style={{ fontSize: 11, color: '#606060', fontStyle: 'italic' }} className="animate-pulse">gen…</span>
           )}
           {data.paramTransferLabel && (
             <span
-              className="text-2xs px-1.5 py-0.5 rounded"
-              style={{ background: 'rgba(124,58,237,0.15)', color: '#a78bfa' }}
+              style={{
+                fontSize: 10, padding: '1px 5px', borderRadius: 2,
+                background: 'rgba(140,73,223,0.15)', color: '#a78bfa',
+                fontFamily: 'var(--font-mono)',
+              }}
               title="Parameter transfer operation"
             >
               ⇄ {data.paramTransferLabel}
             </span>
           )}
-          <Button
-            variant="ghost"
-            size="icon"
+          <button
+            style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              width: 20, height: 20, padding: 0, borderRadius: 2,
+              border: '1px solid #2a2a2a', background: 'transparent', color: '#555',
+              cursor: 'pointer', flexShrink: 0,
+            }}
             onClick={() => store.deleteNode(id)}
-            className="h-5 w-5 text-muted-foreground hover:text-error"
+            title="Delete"
           >
-            <FontAwesomeIcon icon={faXmark} />
-          </Button>
+            <FontAwesomeIcon icon={faXmark} style={{ width: 9, height: 9 }} />
+          </button>
         </div>
       </div>
 
@@ -367,7 +387,7 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
               }
               rows={3}
               className="nodrag flex min-h-[60px] w-full rounded-md border border-border bg-input px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
-              style={{ lineHeight: '1.5', fontFamily: 'Inter, sans-serif' }}
+              style={{ lineHeight: '1.5', fontFamily: 'var(--font-sans)', fontSize: 12, borderRadius: 3 }}
               onFocus={() => setShowSuggestions(suggestions.length > 0)}
               onBlur={() => {
                 setTimeout(() => setShowSuggestions(false), 150)
@@ -377,7 +397,7 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
             {showSuggestions && suggestions.length > 0 && (
               <div
                 className="absolute z-50 w-full top-full mt-1 rounded overflow-hidden shadow-popup"
-                style={{ background: '#1a1a2e', border: '1px solid #333' }}
+                style={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 3 }}
               >
                 {suggestions.map((s, i) => (
                   <button
