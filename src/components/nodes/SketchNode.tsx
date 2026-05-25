@@ -313,16 +313,16 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
         minWidth={PREVIEW_W + 20}
         minHeight={PREVIEW_H + 80}
         color={nodeAccent}
-        handleStyle={{ width: 8, height: 8, borderRadius: 1 }}
-        lineStyle={{ borderColor: `${nodeAccent}50` }}
+        handleStyle={{ width: 10, height: 10, borderRadius: 2, border: `2px solid ${nodeAccent}`, background: '#111' }}
+        lineStyle={{ display: 'none' }}
         onResize={(_, p) => {
           store.updateSketchDims(id, p.width, p.height - 80)
         }}
       />
 
-      {/* Handles — square for the glitch aesthetic */}
-      <Handle type="target" position={Position.Left}  id="left"  style={{ background: nodeAccent, width: 10, height: 10, borderRadius: 1 }} />
-      <Handle type="source" position={Position.Right} id="right" style={{ background: nodeAccent, width: 10, height: 10, borderRadius: 1 }} />
+      {/* Handles — square for the glitch aesthetic, no border */}
+      <Handle type="target" position={Position.Left}  id="left"  style={{ background: nodeAccent, width: 10, height: 10, borderRadius: 1, border: 'none' }} />
+      <Handle type="source" position={Position.Right} id="right" style={{ background: nodeAccent, width: 10, height: 10, borderRadius: 1, border: 'none' }} />
 
       {/* Header */}
       <div style={{
@@ -332,17 +332,6 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
         background: 'rgba(0,0,0,0.25)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-          {/* Glitch icon badge */}
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            width: 20, height: 20, flexShrink: 0,
-            border: `2px solid ${nodeAccent}`,
-            borderRadius: 2,
-            color: nodeAccent,
-            fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700,
-          }}>
-            {data.library === 'p5js' ? '⌨' : '⬡'}
-          </span>
           {editingTitle ? (
             <input
               autoFocus
