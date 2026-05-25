@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react'
 import {
   Play, Pause, Restart, Code, Layers, Launch, CenterToFit, ShrinkScreenFilled, Close,
   MagicWand, Merge, Compare, Cut, Copy, TrashCan,
-  ChartScatter, Reset, ChildNode, ArrowsHorizontal,
+  Explore, Reset, ChildNode, ArrowsHorizontal,
   Flash, InProgress, Settings, Plug, Help, View, ViewOff, Checkmark,
   StopFilled, ZoomIn, ZoomOut, Locked, Unlocked, ChevronDown,
 } from '@carbon/icons-react'
@@ -33,7 +33,7 @@ const ICONS: Record<string, React.ElementType<any>> = {
   'reset':              TrashCan,
 
   // Axes
-  'discover-axes':      ChartScatter,
+  'discover-axes':      Explore,
   'refresh':            Reset,
   'open-new-node':      ChildNode,
 
