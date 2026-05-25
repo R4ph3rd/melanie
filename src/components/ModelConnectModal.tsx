@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faCheck, faEye, faEyeSlash, faExternalLink, faXmark } from '@fortawesome/free-solid-svg-icons'
+import Icon from './ui/Icon'
 import { PROVIDERS } from '../api/providers'
 import { useStore } from '../store/store'
 import { Button } from './ui/button'
@@ -39,7 +38,7 @@ export default function ModelConnectModal({ onClose }: Props) {
           className={
             'fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 ' +
             'w-full max-w-lg max-h-[80vh] flex flex-col ' +
-            'rounded-xl border border-border bg-popover shadow-popup ' +
+            'rounded border border-border bg-popover shadow-popup ' +
             'data-[state=open]:animate-in data-[state=closed]:animate-out ' +
             'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 ' +
             'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95'
@@ -47,7 +46,7 @@ export default function ModelConnectModal({ onClose }: Props) {
         >
           {/* Close button */}
           <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-60 text-muted-foreground transition-opacity hover:opacity-100 focus:outline-none">
-            <FontAwesomeIcon icon={faXmark} className="h-4 w-4" />
+            <Icon name="close" size={16} />
             <span className="sr-only">Close</span>
           </DialogPrimitive.Close>
 
@@ -73,7 +72,7 @@ export default function ModelConnectModal({ onClose }: Props) {
                 return (
                   <div
                     key={provider.id}
-                    className="rounded-lg border p-4"
+                    className="rounded border p-4"
                     style={{
                       borderColor: isActive ? 'rgba(140,73,223,0.4)' : '#2a2a2a',
                       background:  isActive ? 'rgba(140,73,223,0.05)' : '#111',
@@ -95,7 +94,7 @@ export default function ModelConnectModal({ onClose }: Props) {
                         rel="noreferrer"
                         className="ml-auto flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
                       >
-                        Get key <FontAwesomeIcon icon={faExternalLink} className="text-[10px]" />
+                        Get key <Icon name="open-new-tab" size={10} />
                       </a>
                     </div>
 
@@ -108,7 +107,7 @@ export default function ModelConnectModal({ onClose }: Props) {
                           onChange={(e) => setDrafts((d) => ({ ...d, [provider.id]: e.target.value }))}
                           onKeyDown={(e) => e.key === 'Enter' && saveDraft(provider.id)}
                           placeholder={provider.keyPrefix ? `${provider.keyPrefix}…` : 'API key…'}
-                          className="flex h-8 w-full rounded-md border border-border bg-input px-3 pr-8 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                          className="flex h-8 w-full rounded border border-border bg-input px-3 pr-8 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                           style={saved ? { borderColor: 'rgba(74,222,128,0.3)' } : undefined}
                         />
                         <Button
@@ -118,7 +117,7 @@ export default function ModelConnectModal({ onClose }: Props) {
                           onClick={() => setShow((s) => ({ ...s, [provider.id]: !s[provider.id] }))}
                           className="absolute right-0 top-0 h-8 w-8 text-muted-foreground hover:text-foreground"
                         >
-                          <FontAwesomeIcon icon={show[provider.id] ? faEyeSlash : faEye} />
+                          <Icon name={show[provider.id] ? 'view-off' : 'view'} size={14} />
                         </Button>
                       </div>
                       <Button
@@ -128,7 +127,7 @@ export default function ModelConnectModal({ onClose }: Props) {
                         className="flex items-center gap-1 flex-shrink-0"
                       >
                         {!isDirty && saved
-                          ? <><FontAwesomeIcon icon={faCheck} /> Saved</>
+                          ? <><Icon name="checkmark" size={12} /> Saved</>
                           : 'Save'}
                       </Button>
                     </div>

@@ -26,15 +26,7 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { nanoid } from 'nanoid'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import {
-  faMagicWandSparkles,
-  faClone,
-  faCodeMerge,
-  faCodeBranch,
-  faScissors,
-  faXmark,
-} from '@fortawesome/free-solid-svg-icons'
+import Icon from './ui/Icon'
 import { useStore } from '../store/store'
 import SketchNode from './nodes/SketchNode'
 import OperatorNode from './nodes/OperatorNode'
@@ -56,21 +48,21 @@ const nodeTypes: NodeTypes = {
 interface OpMenuEntry {
   type: OperatorType
   label: string
-  icon: typeof faMagicWandSparkles
+  icon: string
   color: string
 }
 
 const CONN_OPS: OpMenuEntry[] = [
-  { type: 'modify',    label: 'Modify',    icon: faMagicWandSparkles, color: '#8C49DF' },
-  { type: 'extract',   label: 'Extract',   icon: faScissors,          color: '#b45309' },
-  { type: 'duplicate', label: 'Duplicate', icon: faClone,             color: '#4b5563' },
-  { type: 'merge',     label: 'Merge',     icon: faCodeMerge,         color: '#1d4ed8' },
-  { type: 'diff',      label: 'Diff',      icon: faCodeBranch,        color: '#047857' },
+  { type: 'modify',    label: 'Modify',    icon: 'modify',    color: '#8C49DF' },
+  { type: 'extract',   label: 'Extract',   icon: 'extract',   color: '#b45309' },
+  { type: 'duplicate', label: 'Duplicate', icon: 'duplicate', color: '#4b5563' },
+  { type: 'merge',     label: 'Merge',     icon: 'merge',     color: '#1d4ed8' },
+  { type: 'diff',      label: 'Diff',      icon: 'diff',      color: '#047857' },
 ]
 
 const MERGE_OPS: OpMenuEntry[] = [
-  { type: 'merge', label: 'Merge', icon: faCodeMerge,  color: '#1d4ed8' },
-  { type: 'diff',  label: 'Diff',  icon: faCodeBranch, color: '#047857' },
+  { type: 'merge', label: 'Merge', icon: 'merge', color: '#1d4ed8' },
+  { type: 'diff',  label: 'Diff',  icon: 'diff',  color: '#047857' },
 ]
 
 // ─── Canvas ───────────────────────────────────────────────────────────────────
@@ -355,7 +347,7 @@ export default function Canvas() {
       {/* Merge/toolbar-op mode toast */}
       {(mergingId || store.pendingToolbarOp) && (
         <div
-          className="absolute top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full text-sm font-medium pointer-events-none"
+          className="absolute top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded text-sm font-medium pointer-events-none"
           style={{ background: 'rgba(29,78,216,0.9)', color: '#fff', backdropFilter: 'blur(4px)' }}
         >
           {pendingOpType === 'diff'
@@ -394,7 +386,7 @@ export default function Canvas() {
         {!backgroundData && (
           <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="#1e1e2e" />
         )}
-        <Controls style={{ background: '#111118', border: '1px solid #2a2a3a', borderRadius: 8 }} />
+        <Controls style={{ background: '#111', border: '1px solid #2a2a2a', borderRadius: 3 }} />
         <MiniMap
           style={{ background: '#0e0e16', border: '1px solid #2a2a3a' }}
           nodeColor={(n) => n.type === 'sketch' ? '#1a1f2e' : '#1c1428'}
@@ -444,7 +436,7 @@ export default function Canvas() {
                     width: 22, height: 22, flexShrink: 0,
                     border: `2px solid ${op.color}`, borderRadius: 2, color: op.color,
                   }}>
-                    <FontAwesomeIcon icon={op.icon} style={{ width: 10, height: 10 }} />
+                    <Icon name={op.icon} size={10} />
                   </span>
                   {op.label}
                 </button>
@@ -506,7 +498,7 @@ export default function Canvas() {
                     width: 22, height: 22, flexShrink: 0,
                     border: `2px solid ${op.color}`, borderRadius: 2, color: op.color,
                   }}>
-                    <FontAwesomeIcon icon={op.icon} style={{ width: 10, height: 10 }} />
+                    <Icon name={op.icon} size={10} />
                   </span>
                   {op.label}
                 </button>

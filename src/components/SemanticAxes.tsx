@@ -13,8 +13,7 @@
  */
 import { memo, useCallback, useRef, useState } from 'react'
 import { nanoid } from 'nanoid'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faWandMagicSparkles, faArrowRotateRight, faUpRightFromSquare, faSpinner } from '@fortawesome/free-solid-svg-icons'
+import Icon from './ui/Icon'
 import type { SemanticAxis } from '../utils/types'
 import { useStore } from '../store/store'
 import { generate, generateText } from '../api/providers'
@@ -167,7 +166,7 @@ const SemanticAxes = memo(function SemanticAxes({ nodeId }: Props) {
           }}
           title="Ask the LLM to propose 3-4 aesthetic axes for this sketch"
         >
-          <FontAwesomeIcon icon={discoverLoading ? faSpinner : faWandMagicSparkles} className={discoverLoading ? 'animate-spin' : ''} />
+          <Icon name={discoverLoading ? 'loading' : 'discover-axes'} size={12} className={discoverLoading ? 'animate-spin' : ''} />
           {discoverLoading ? 'Discovering axes…' : 'Discover semantic axes'}
         </button>
       </div>
@@ -179,13 +178,13 @@ const SemanticAxes = memo(function SemanticAxes({ nodeId }: Props) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <span className="text-2xs uppercase tracking-wider text-text-muted flex items-center gap-1">
-          <FontAwesomeIcon icon={faWandMagicSparkles} className="text-[10px]" />
+          <Icon name="discover-axes" size={10} />
           Semantic axes
         </span>
         <div className="flex items-center gap-2">
           {isGenerating && (
             <span className="text-2xs text-purple-300 flex items-center gap-1">
-              <FontAwesomeIcon icon={faSpinner} className="animate-spin text-[9px]" />
+              <Icon name="loading" size={9} className="animate-spin" />
               re-prompting
             </span>
           )}
@@ -195,7 +194,7 @@ const SemanticAxes = memo(function SemanticAxes({ nodeId }: Props) {
             className="text-2xs text-text-muted hover:text-text-primary nodrag"
             title="Re-discover axes from scratch"
           >
-            <FontAwesomeIcon icon={discoverLoading ? faSpinner : faArrowRotateRight} className={discoverLoading ? 'animate-spin' : ''} />
+            <Icon name={discoverLoading ? 'loading' : 'refresh'} size={11} className={discoverLoading ? 'animate-spin' : ''} />
           </button>
         </div>
       </div>
@@ -210,7 +209,7 @@ const SemanticAxes = memo(function SemanticAxes({ nodeId }: Props) {
               title={`Pin "${a.leftLabel}" pole as a new branch sketch\n\n${a.leftPrompt}`}
               style={{ maxWidth: '40%' }}
             >
-              <FontAwesomeIcon icon={faUpRightFromSquare} className="text-[8px] opacity-50" />
+              <Icon name="open-new-node" size={10} style={{ opacity: 0.5 }} />
               <span className="truncate">{a.leftLabel}</span>
             </button>
             <button
@@ -220,7 +219,7 @@ const SemanticAxes = memo(function SemanticAxes({ nodeId }: Props) {
               style={{ maxWidth: '40%' }}
             >
               <span className="truncate">{a.rightLabel}</span>
-              <FontAwesomeIcon icon={faUpRightFromSquare} className="text-[8px] opacity-50" />
+              <Icon name="open-new-node" size={10} style={{ opacity: 0.5 }} />
             </button>
           </div>
           <input

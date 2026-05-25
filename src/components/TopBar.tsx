@@ -2,8 +2,7 @@ import { useState } from 'react'
 import * as SelectPrimitive      from '@radix-ui/react-select'
 import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu'
 import * as PopoverPrimitive     from '@radix-ui/react-popover'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faPlug, faGear, faCircleQuestion } from '@fortawesome/free-solid-svg-icons'
+import Icon from './ui/Icon'
 import { ChevronDown, Check } from 'lucide-react'
 import { useStore } from '../store/store'
 import { PROVIDERS } from '../api/providers'
@@ -11,7 +10,7 @@ import ModelConnectModal from './ModelConnectModal'
 
 // ── Shared Tailwind strings ────────────────────────────────────────────────────
 const dropdownContentCls =
-  'z-50 min-w-[8rem] overflow-hidden rounded-md border border-border bg-popover p-1 text-foreground shadow-popup ' +
+  'z-50 min-w-[8rem] overflow-hidden rounded border border-border bg-popover p-1 text-foreground shadow-popup ' +
   'data-[state=open]:animate-in data-[state=closed]:animate-out ' +
   'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 ' +
   'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95'
@@ -74,7 +73,7 @@ export default function TopBar() {
               }}
             >
               <SelectPrimitive.Trigger
-                className="flex h-7 w-[180px] items-center justify-between whitespace-nowrap rounded-md border border-border bg-input px-3 py-1 text-xs text-foreground shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                className="flex h-7 w-[180px] items-center justify-between whitespace-nowrap rounded border border-border bg-input px-3 py-1 text-xs text-foreground shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
               >
                 <SelectPrimitive.Value />
                 <SelectPrimitive.Icon asChild>
@@ -85,7 +84,7 @@ export default function TopBar() {
               <SelectPrimitive.Portal>
                 <SelectPrimitive.Content
                   className={
-                    'relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded-md border border-border ' +
+                    'relative z-50 max-h-96 min-w-[8rem] overflow-hidden rounded border border-border ' +
                     'bg-popover text-foreground shadow-popup ' +
                     'data-[state=open]:animate-in data-[state=closed]:animate-out ' +
                     'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 ' +
@@ -122,7 +121,7 @@ export default function TopBar() {
             </SelectPrimitive.Root>
 
             <span
-              className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+              className="w-1.5 h-1.5 rounded-sm flex-shrink-0"
               style={{ background: hasKey ? '#4ade80' : '#f87171' }}
               title={hasKey ? 'API key set' : 'No API key'}
             />
@@ -144,7 +143,7 @@ export default function TopBar() {
             cursor: 'pointer', transition: 'all 0.1s', whiteSpace: 'nowrap',
           }}
         >
-          <FontAwesomeIcon icon={faPlug} style={{ width: 11, height: 11 }} />
+          <Icon name="connect" size={12} />
           {hasKey ? 'Models' : 'Connect'}
         </button>
 
@@ -160,7 +159,7 @@ export default function TopBar() {
             onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#8C49DF'; e.currentTarget.style.color = '#8C49DF' }}
             onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#333'; e.currentTarget.style.color = '#555' }}
             >
-              <FontAwesomeIcon icon={faGear} style={{ width: 12, height: 12 }} />
+              <Icon name="settings" size={14} />
             </button>
           </DropdownMenuPrimitive.Trigger>
           <DropdownMenuPrimitive.Portal>
@@ -203,7 +202,7 @@ export default function TopBar() {
             onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#8C49DF'; e.currentTarget.style.color = '#8C49DF' }}
             onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#333'; e.currentTarget.style.color = '#555' }}
             >
-              <FontAwesomeIcon icon={faCircleQuestion} style={{ width: 12, height: 12 }} />
+              <Icon name="help" size={14} />
             </button>
           </PopoverPrimitive.Trigger>
           <PopoverPrimitive.Portal>
@@ -211,7 +210,7 @@ export default function TopBar() {
               align="end"
               sideOffset={4}
               className={
-                'z-50 w-[360px] rounded-md border border-border bg-popover p-4 text-foreground shadow-popup outline-none text-xs ' +
+                'z-50 w-[360px] rounded border border-border bg-popover p-4 text-foreground shadow-popup outline-none text-xs ' +
                 'data-[state=open]:animate-in data-[state=closed]:animate-out ' +
                 'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 ' +
                 'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 ' +

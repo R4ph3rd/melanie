@@ -4,7 +4,7 @@ import { javascript } from '@codemirror/lang-javascript'
 import { vscodeDark } from '@uiw/codemirror-theme-vscode'
 import { keymap } from '@codemirror/view'
 import { Prec } from '@codemirror/state'
-import { X } from 'lucide-react'
+import Icon from './ui/Icon'
 import { useStore } from '../store/store'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
@@ -109,7 +109,7 @@ export default function CodePanel({ nodeId, onClose }: Props) {
               background: 'transparent', color: '#555', cursor: 'pointer',
             }}
           >
-            <X className="h-3 w-3" />
+            <Icon name="close" size={12} />
           </button>
         </div>
       </div>

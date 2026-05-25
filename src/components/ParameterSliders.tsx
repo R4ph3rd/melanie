@@ -11,8 +11,7 @@
  *    (sets draggingParam in the global store).
  */
 import { memo, useState } from 'react'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faArrowRightArrowLeft } from '@fortawesome/free-solid-svg-icons'
+import Icon from './ui/Icon'
 import type { Parameter } from '../utils/types'
 import { useStore } from '../store/store'
 
@@ -91,7 +90,7 @@ const ParameterSliders = memo(function ParameterSliders({ nodeId, params }: Prop
               onClick={() => handleLabelClick(p)}
             >
               {pickingUp && (
-                <FontAwesomeIcon icon={faArrowRightArrowLeft} className="text-2xs flex-shrink-0" />
+                <Icon name="param-transfer" size={10} style={{ flexShrink: 0 }} />
               )}
               <span className="truncate">{p.semanticLabel || p.label}</span>
             </button>

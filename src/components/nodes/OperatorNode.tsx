@@ -9,13 +9,8 @@
  */
 import { memo, useState, useEffect, useRef, useCallback } from 'react'
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import {
-  faMagicWandSparkles, faClone, faCodeMerge, faCodeBranch,
-  faScissors, faXmark, faBolt,
-} from '@fortawesome/free-solid-svg-icons'
-import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
 import type { OperatorNodeData, OperatorType } from '../../utils/types'
+import Icon from '../ui/Icon'
 import { useStore } from '../../store/store'
 import { generate, generateText } from '../../api/providers'
 import {
@@ -31,20 +26,19 @@ import {
   buildParamTransferMessages,
 } from '../../prompts'
 import { extractParameters, applySemanticLabels } from '../../utils/codeUtils'
-import { Button } from '../ui/button'
 
 type OperatorNodeType = Node<OperatorNodeData, 'operator'>
 
 // ─── Visual meta per op type ──────────────────────────────────────────────────
 
-interface Meta { icon: IconDefinition; label: string; color: string }
+interface Meta { icon: string; label: string; color: string }
 
 const OP_META: Record<OperatorType, Meta> = {
-  modify:    { icon: faMagicWandSparkles, label: 'Modify',    color: '#8C49DF' },
-  duplicate: { icon: faClone,             label: 'Duplicate', color: '#4b5563' },
-  merge:     { icon: faCodeMerge,         label: 'Merge',     color: '#1d4ed8' },
-  diff:      { icon: faCodeBranch,        label: 'Diff',      color: '#047857' },
-  extract:   { icon: faScissors,          label: 'Extract',   color: '#b45309' },
+  modify:    { icon: 'modify',    label: 'Modify',    color: '#8C49DF' },
+  duplicate: { icon: 'duplicate', label: 'Duplicate', color: '#4b5563' },
+  merge:     { icon: 'merge',     label: 'Merge',     color: '#1d4ed8' },
+  diff:      { icon: 'diff',      label: 'Diff',      color: '#047857' },
+  extract:   { icon: 'extract',   label: 'Extract',   color: '#b45309' },
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -313,7 +307,7 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
             border: `2px solid ${borderColor}`,
             borderRadius: 2,
           }}>
-            <FontAwesomeIcon icon={meta.icon} style={{ width: 10, height: 10 }} />
+            <Icon name={meta.icon} size={10} />
           </span>
           <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
             {meta.label}
@@ -345,7 +339,7 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
             onClick={() => store.deleteNode(id)}
             title="Delete"
           >
-            <FontAwesomeIcon icon={faXmark} style={{ width: 9, height: 9 }} />
+            <Icon name="delete" size={9} />
           </button>
         </div>
       </div>
@@ -356,13 +350,17 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
           <p className="text-xs text-text-secondary leading-relaxed">{data.diffText}</p>
         )}
         {isDiff && !data.diffText && !data.isGenerating && (
-          <Button
+          <button
             onClick={() => handleGenerate()}
-            className="w-full flex items-center justify-center gap-2"
-            style={{ background: borderColor, color: '#fff' }}
+            style={{
+              display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'center', gap: 8,
+              padding: '6px 12px', border: `1px solid ${borderColor}`, borderRadius: 2,
+              background: borderColor, color: '#fff',
+              fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 500, cursor: 'pointer',
+            }}
           >
-            <FontAwesomeIcon icon={faCodeBranch} /> Compare
-          </Button>
+            <Icon name="diff" size={14} /> Compare
+          </button>
         )}
 
         {/* Merge info */}
@@ -386,7 +384,7 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
                   : 'Describe the modification…'
               }
               rows={3}
-              className="nodrag flex min-h-[60px] w-full rounded-md border border-border bg-input px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+              className="nodrag flex min-h-[60px] w-full border border-border bg-input px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
               style={{ lineHeight: '1.5', fontFamily: 'var(--font-sans)', fontSize: 12, borderRadius: 3 }}
               onFocus={() => setShowSuggestions(suggestions.length > 0)}
               onBlur={() => {
@@ -396,7 +394,7 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
             {/* Autocomplete dropdown */}
             {showSuggestions && suggestions.length > 0 && (
               <div
-                className="absolute z-50 w-full top-full mt-1 rounded overflow-hidden shadow-popup"
+                className="absolute z-50 w-full top-full mt-1 overflow-hidden shadow-popup"
                 style={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 3 }}
               >
                 {suggestions.map((s, i) => (
@@ -425,7 +423,7 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
         {/* Streaming preview */}
         {streamingCode && (
           <pre
-            className="text-2xs text-text-muted overflow-hidden rounded p-1.5"
+            className="text-2xs text-text-muted overflow-hidden p-1.5"
             style={{ background: '#0a0a14', maxHeight: 80, fontFamily: 'monospace' }}
           >
             {streamingCode.slice(-300)}
@@ -434,23 +432,24 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
 
         {/* Generate / loading */}
         {(needsPrompt || isMerge) && !data.isGenerating && (
-          <Button
+          <button
             onClick={() => handleGenerate()}
             disabled={needsPrompt && !prompt.trim()}
-            className="w-full flex items-center justify-center gap-2"
-            style={{ background: borderColor, color: '#fff' }}
+            style={{
+              display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'center', gap: 8,
+              padding: '6px 12px', border: `1px solid ${borderColor}`, borderRadius: 2,
+              background: borderColor, color: '#fff',
+              fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 500, cursor: 'pointer',
+              opacity: needsPrompt && !prompt.trim() ? 0.4 : 1,
+            }}
           >
-            <FontAwesomeIcon icon={faBolt} />
+            <Icon name="generate" size={14} />
             {isMerge ? 'Blend Sketches' : 'Generate'}
-          </Button>
+          </button>
         )}
         {data.isGenerating && (
           <div className="flex items-center justify-center gap-2 py-1.5">
-            <FontAwesomeIcon
-              icon={faMagicWandSparkles}
-              className="animate-pulse"
-              style={{ color: borderColor }}
-            />
+            <Icon name="modify" size={14} className="animate-pulse" style={{ color: borderColor }} />
             <span className="text-xs text-muted-foreground">Generating…</span>
           </div>
         )}

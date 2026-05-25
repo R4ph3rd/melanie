@@ -2,35 +2,66 @@
  * Persistent operations toolbar : rendered inside the ReactFlow canvas via <Panel>.
  * Each op button uses the glitch icon-badge pattern: bordered icon + label.
  */
+import { useState } from 'react'
 import { Panel } from '@xyflow/react'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import {
-  faMagicWandSparkles,
-  faClone,
-  faCodeMerge,
-  faCodeBranch,
-  faScissors,
-  faTrashCan,
-} from '@fortawesome/free-solid-svg-icons'
-import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
 import type { OperatorType } from '../utils/types'
 import { useStore } from '../store/store'
+import Icon from './ui/Icon'
 
 interface OpEntry {
   type:  OperatorType
   label: string
-  icon:  IconDefinition
+  icon:  string
   color: string
   title: string
 }
 
 const OPS: OpEntry[] = [
-  { type: 'modify',    label: 'Modify',    icon: faMagicWandSparkles, color: '#8C49DF', title: 'Modify a sketch with a prompt' },
-  { type: 'merge',     label: 'Merge',     icon: faCodeMerge,         color: '#1d4ed8', title: 'Blend two sketches into one' },
-  { type: 'diff',      label: 'Diff',      icon: faCodeBranch,        color: '#047857', title: 'Compare two sketches' },
-  { type: 'extract',   label: 'Extract',   icon: faScissors,          color: '#b45309', title: 'Isolate a visual element as a new sketch' },
-  { type: 'duplicate', label: 'Clone',     icon: faClone,             color: '#4b5563', title: 'Clone a sketch to branch from' },
+  { type: 'modify',    label: 'Modify',    icon: 'modify',    color: '#8C49DF', title: 'Modify a sketch with a prompt' },
+  { type: 'merge',     label: 'Merge',     icon: 'merge',     color: '#1d4ed8', title: 'Blend two sketches into one' },
+  { type: 'diff',      label: 'Diff',      icon: 'diff',      color: '#047857', title: 'Compare two sketches' },
+  { type: 'extract',   label: 'Extract',   icon: 'extract',   color: '#b45309', title: 'Isolate a visual element as a new sketch' },
+  { type: 'duplicate', label: 'Clone',     icon: 'duplicate', color: '#4b5563', title: 'Clone a sketch to branch from' },
 ]
+
+function OpButton({ op, isActive, onClick }: { op: OpEntry; isActive: boolean; onClick: () => void }) {
+  const [hovered, setHovered] = useState(false)
+  const lit = isActive || hovered
+  return (
+    <button
+      onClick={onClick}
+      title={op.title}
+      className="nodrag"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 8,
+        padding: '5px 10px',
+        border: `1px solid ${lit ? op.color : '#2a2a2a'}`,
+        borderRadius: 3,
+        background: lit ? `color-mix(in srgb, ${op.color} 14%, transparent)` : 'transparent',
+        color: lit ? op.color : '#707070',
+        fontFamily: 'var(--font-sans)',
+        fontSize: 12, fontWeight: 500,
+        cursor: 'pointer',
+        transition: 'all 0.1s',
+        minWidth: 118,
+      }}
+    >
+      <span style={{
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        width: 22, height: 22,
+        border: `2px solid ${lit ? op.color : '#444'}`,
+        borderRadius: 2,
+        flexShrink: 0,
+        transition: 'border-color 0.1s',
+      }}>
+        <Icon name={op.icon} size={10} />
+      </span>
+      {op.label}
+    </button>
+  )
+}
 
 export default function OpsToolbar() {
   const pendingToolbarOp    = useStore((s) => s.pendingToolbarOp)
@@ -57,39 +88,8 @@ export default function OpsToolbar() {
         {OPS.map((op) => {
           const isActive = pendingToolbarOp === op.type ||
             (!!mergingSourceId && (op.type === 'merge' || op.type === 'diff'))
-
           return (
-            <button
-              key={op.type}
-              onClick={() => handleClick(op.type)}
-              title={op.title}
-              className="nodrag"
-              style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                padding: '5px 10px',
-                border: `1px solid ${isActive ? op.color : '#2a2a2a'}`,
-                borderRadius: 3,
-                background: isActive ? `color-mix(in srgb, ${op.color} 14%, transparent)` : 'transparent',
-                color: isActive ? op.color : '#707070',
-                fontFamily: 'var(--font-sans)',
-                fontSize: 12, fontWeight: 500,
-                cursor: 'pointer',
-                transition: 'all 0.1s',
-                minWidth: 118,
-              }}
-            >
-              <span style={{
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                width: 22, height: 22,
-                border: `2px solid ${isActive ? op.color : '#444'}`,
-                borderRadius: 2,
-                flexShrink: 0,
-                transition: 'border-color 0.1s',
-              }}>
-                <FontAwesomeIcon icon={op.icon} style={{ width: 10, height: 10 }} />
-              </span>
-              {op.label}
-            </button>
+            <OpButton key={op.type} op={op} isActive={isActive} onClick={() => handleClick(op.type)} />
           )
         })}
 
@@ -146,9 +146,9 @@ export default function OpsToolbar() {
             border: '2px solid #3a3a3a',
             borderRadius: 2, flexShrink: 0,
           }}>
-            <FontAwesomeIcon icon={faTrashCan} style={{ width: 10, height: 10 }} />
+            <Icon name="delete" size={10} />
           </span>
-          Reset
+          Clear
         </button>
       </div>
     </Panel>

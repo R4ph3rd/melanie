@@ -1,12 +1,7 @@
 import { memo, useState, useCallback, useEffect, useRef } from 'react'
 import { Handle, Position, NodeResizer, type NodeProps, type Node, useReactFlow } from '@xyflow/react'
 import { nanoid } from 'nanoid'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import {
-  faPlay, faPause, faRotateRight, faCode, faXmark, faExpand,
-  faMagicWandSparkles, faClone, faCodeMerge, faCodeBranch, faScissors,
-  faArrowRightArrowLeft, faImage, faUpRightFromSquare,
-} from '@fortawesome/free-solid-svg-icons'
+import Icon from '../ui/Icon'
 import type { SketchNodeData, OperatorType } from '../../utils/types'
 import { useStore } from '../../store/store'
 import { buildSketchPopupHtml } from '../../utils/codeUtils'
@@ -368,7 +363,7 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
             title="Delete node"
             className="nodrag"
           >
-            <FontAwesomeIcon icon={faXmark} style={{ width: 9, height: 9 }} />
+            <Icon name="delete" size={9} />
           </button>
         </div>
       </div>
@@ -398,31 +393,31 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px 6px' }} onClick={(e) => e.stopPropagation()}>
         <button style={CTRL} onClick={() => store.updateSketchRunning(id, !data.isRunning)}
           title={data.isRunning ? 'Pause' : 'Play'} className="nodrag">
-          <FontAwesomeIcon icon={data.isRunning ? faPause : faPlay} style={{ width: 11, height: 11 }} />
+          <Icon name={data.isRunning ? 'pause' : 'play'} size={11} />
         </button>
         <button style={CTRL} onClick={() => store.reloadSketch(id)}
           title="Reload" className="nodrag">
-          <FontAwesomeIcon icon={faRotateRight} style={{ width: 11, height: 11 }} />
+          <Icon name="restart" size={11} />
         </button>
         <button
           style={store.activeCodeNodeId === id ? CTRL_ACTIVE : CTRL}
           onClick={() => store.setActiveCodeNodeId(store.activeCodeNodeId === id ? null : id)}
           title="Toggle code editor" className="nodrag">
-          <FontAwesomeIcon icon={faCode} style={{ width: 11, height: 11 }} />
+          <Icon name="code-editor" size={11} />
         </button>
         <button
           style={isBackground ? CTRL_ACTIVE : CTRL}
           onClick={handleToggleBackground}
           title={isBackground ? 'Stop drawing behind canvas' : 'Draw behind canvas'} className="nodrag">
-          <FontAwesomeIcon icon={faImage} style={{ width: 11, height: 11 }} />
+          <Icon name="display-background" size={11} />
         </button>
         <button style={CTRL} onClick={handleOpenInWindow}
           title="Open in new window" className="nodrag">
-          <FontAwesomeIcon icon={faUpRightFromSquare} style={{ width: 11, height: 11 }} />
+          <Icon name="open-new-tab" size={11} />
         </button>
         <button style={{ ...CTRL, marginLeft: 'auto' }} onClick={handleMaximize}
           title="Zoom to fit" className="nodrag">
-          <FontAwesomeIcon icon={faExpand} style={{ width: 11, height: 11 }} />
+          <Icon name="zoom-to-fit" size={11} />
         </button>
       </div>
 
@@ -438,7 +433,7 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
           elements would otherwise stop propagation. */}
       {isInteractiveTarget && (
         <div
-          className="absolute inset-0 flex items-center justify-center rounded-lg text-sm font-medium"
+          className="absolute inset-0 flex items-center justify-center text-sm font-medium"
           style={{ cursor: 'crosshair',
             background: isParamDropTarget
               ? 'rgba(140,73,223,0.1)'
@@ -450,21 +445,13 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
           onClick={(e) => { e.stopPropagation(); handleNodeClick() }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(0,0,0,0.55)', padding: '6px 14px', borderRadius: 3, backdropFilter: 'blur(4px)' }}>
-            {isParamDropTarget && <FontAwesomeIcon icon={faArrowRightArrowLeft} />}
-            {isMergingTarget && (store.pendingOpType === 'diff'
-              ? <FontAwesomeIcon icon={faCodeBranch} />
-              : <FontAwesomeIcon icon={faCodeMerge} />)}
-            {isToolbarOpTarget && !isMergingTarget && (() => {
-              const icons: Record<string, typeof faMagicWandSparkles> = {
-                modify:    faMagicWandSparkles,
-                duplicate: faClone,
-                merge:     faCodeMerge,
-                diff:      faCodeBranch,
-                extract:   faScissors,
-              }
-              const OpIcon = icons[store.pendingToolbarOp!] ?? faMagicWandSparkles
-              return <FontAwesomeIcon icon={OpIcon} />
-            })()}
+            {isParamDropTarget && <Icon name="param-transfer" size={14} />}
+            {isMergingTarget && (
+              <Icon name={store.pendingOpType === 'diff' ? 'diff' : 'merge'} size={14} />
+            )}
+            {isToolbarOpTarget && !isMergingTarget && (
+              <Icon name={store.pendingToolbarOp ?? 'modify'} size={14} />
+            )}
             <span>{overlayLabel}</span>
           </div>
         </div>
