@@ -14,7 +14,7 @@
 import { memo, useCallback, useRef, useState } from 'react'
 import { nanoid } from 'nanoid'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faWandMagicSparkles, faArrowRotateRight, faThumbtack, faSpinner } from '@fortawesome/free-solid-svg-icons'
+import { faWandMagicSparkles, faArrowRotateRight, faUpRightFromSquare, faSpinner } from '@fortawesome/free-solid-svg-icons'
 import type { SemanticAxis } from '../utils/types'
 import { useStore } from '../store/store'
 import { generate, generateText } from '../api/providers'
@@ -210,7 +210,7 @@ const SemanticAxes = memo(function SemanticAxes({ nodeId }: Props) {
               title={`Pin "${a.leftLabel}" pole as a new branch sketch\n\n${a.leftPrompt}`}
               style={{ maxWidth: '40%' }}
             >
-              <FontAwesomeIcon icon={faThumbtack} className="text-[8px] opacity-50" />
+              <FontAwesomeIcon icon={faUpRightFromSquare} className="text-[8px] opacity-50" />
               <span className="truncate">{a.leftLabel}</span>
             </button>
             <button
@@ -220,7 +220,7 @@ const SemanticAxes = memo(function SemanticAxes({ nodeId }: Props) {
               style={{ maxWidth: '40%' }}
             >
               <span className="truncate">{a.rightLabel}</span>
-              <FontAwesomeIcon icon={faThumbtack} className="text-[8px] opacity-50" />
+              <FontAwesomeIcon icon={faUpRightFromSquare} className="text-[8px] opacity-50" />
             </button>
           </div>
           <input

@@ -408,39 +408,58 @@ export default function Canvas() {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setConnOpsMenu(null)} />
           <div
-            className="fixed z-50 rounded-lg overflow-hidden shadow-popup"
+            className="fixed z-50"
             style={{
-              left:       connOpsMenu.screenX,
-              top:        connOpsMenu.screenY,
-              background: '#1a1a2a',
-              border:     '1px solid #333',
-              minWidth:   140,
-              transform:  'translate(-50%, 8px)',
+              left: connOpsMenu.screenX, top: connOpsMenu.screenY,
+              transform: 'translate(-50%, 8px)',
+              background: '#111', border: '1px solid #333', borderRadius: 4,
+              padding: 6, minWidth: 148,
+              boxShadow: '0 4px 20px rgba(0,0,0,0.6)',
             }}
           >
-            <div
-              className="px-3 py-1.5 text-2xs text-text-muted uppercase tracking-wide"
-              style={{ borderBottom: '1px solid #252535' }}
-            >
+            <div style={{
+              padding: '2px 10px 4px', marginBottom: 4,
+              fontSize: 9, fontFamily: 'var(--font-mono)', letterSpacing: '0.04em',
+              color: '#555', textTransform: 'uppercase',
+              borderBottom: '1px solid #2a2a2a',
+            }}>
               Add operation
             </div>
-            {CONN_OPS.map((op) => (
-              <button
-                key={op.type}
-                onClick={() => applyConnOp(op.type, connOpsMenu.sourceNodeId, connOpsMenu.screenX, connOpsMenu.screenY)}
-                className="w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-surface3"
-                style={{ color: op.color }}
-              >
-                <FontAwesomeIcon icon={op.icon} className="w-3.5" />
-                <span className="text-text-secondary">{op.label}</span>
-              </button>
-            ))}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              {CONN_OPS.map((op) => (
+                <button
+                  key={op.type}
+                  onClick={() => applyConnOp(op.type, connOpsMenu.sourceNodeId, connOpsMenu.screenX, connOpsMenu.screenY)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '5px 10px', width: '100%', textAlign: 'left',
+                    border: '1px solid #2a2a2a', borderRadius: 3,
+                    background: 'transparent', color: '#707070',
+                    fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 500,
+                    cursor: 'pointer', transition: 'all 0.1s',
+                  }}
+                >
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    width: 22, height: 22, flexShrink: 0,
+                    border: `2px solid ${op.color}`, borderRadius: 2, color: op.color,
+                  }}>
+                    <FontAwesomeIcon icon={op.icon} style={{ width: 10, height: 10 }} />
+                  </span>
+                  {op.label}
+                </button>
+              ))}
+            </div>
             <button
               onClick={() => setConnOpsMenu(null)}
-              className="w-full text-center px-3 py-1.5 text-xs text-text-muted hover:text-text-primary hover:bg-surface3"
-              style={{ borderTop: '1px solid #252535' }}
+              style={{
+                marginTop: 4, width: '100%', padding: '3px 0',
+                background: 'transparent', border: 'none',
+                color: '#555', fontSize: 11, fontFamily: 'var(--font-mono)',
+                cursor: 'pointer', textAlign: 'center',
+              }}
             >
-              <FontAwesomeIcon icon={faXmark} className="mr-1" /> Cancel
+              × cancel
             </button>
           </div>
         </>
@@ -451,39 +470,58 @@ export default function Canvas() {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setMergeMenu(null)} />
           <div
-            className="fixed z-50 rounded-lg overflow-hidden shadow-popup"
+            className="fixed z-50"
             style={{
-              left:       mergeMenu.screenX,
-              top:        mergeMenu.screenY,
-              background: '#1a1a2a',
-              border:     '1px solid #333',
-              minWidth:   140,
-              transform:  'translate(-50%, 8px)',
+              left: mergeMenu.screenX, top: mergeMenu.screenY,
+              transform: 'translate(-50%, 8px)',
+              background: '#111', border: '1px solid #333', borderRadius: 4,
+              padding: 6, minWidth: 148,
+              boxShadow: '0 4px 20px rgba(0,0,0,0.6)',
             }}
           >
-            <div
-              className="px-3 py-1.5 text-2xs text-text-muted uppercase tracking-wide"
-              style={{ borderBottom: '1px solid #252535' }}
-            >
+            <div style={{
+              padding: '2px 10px 4px', marginBottom: 4,
+              fontSize: 9, fontFamily: 'var(--font-mono)', letterSpacing: '0.04em',
+              color: '#555', textTransform: 'uppercase',
+              borderBottom: '1px solid #2a2a2a',
+            }}>
               Two sketches…
             </div>
-            {MERGE_OPS.map((op) => (
-              <button
-                key={op.type}
-                onClick={() => applyMergeOp(op.type as 'merge' | 'diff', mergeMenu.sourceNodeId, mergeMenu.targetNodeId)}
-                className="w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-surface3"
-                style={{ color: op.color }}
-              >
-                <FontAwesomeIcon icon={op.icon} className="w-3.5" />
-                <span className="text-text-secondary">{op.label}</span>
-              </button>
-            ))}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              {MERGE_OPS.map((op) => (
+                <button
+                  key={op.type}
+                  onClick={() => applyMergeOp(op.type as 'merge' | 'diff', mergeMenu.sourceNodeId, mergeMenu.targetNodeId)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '5px 10px', width: '100%', textAlign: 'left',
+                    border: '1px solid #2a2a2a', borderRadius: 3,
+                    background: 'transparent', color: '#707070',
+                    fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 500,
+                    cursor: 'pointer', transition: 'all 0.1s',
+                  }}
+                >
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    width: 22, height: 22, flexShrink: 0,
+                    border: `2px solid ${op.color}`, borderRadius: 2, color: op.color,
+                  }}>
+                    <FontAwesomeIcon icon={op.icon} style={{ width: 10, height: 10 }} />
+                  </span>
+                  {op.label}
+                </button>
+              ))}
+            </div>
             <button
               onClick={() => setMergeMenu(null)}
-              className="w-full text-center px-3 py-1.5 text-xs text-text-muted hover:text-text-primary hover:bg-surface3"
-              style={{ borderTop: '1px solid #252535' }}
+              style={{
+                marginTop: 4, width: '100%', padding: '3px 0',
+                background: 'transparent', border: 'none',
+                color: '#555', fontSize: 11, fontFamily: 'var(--font-mono)',
+                cursor: 'pointer', textAlign: 'center',
+              }}
             >
-              <FontAwesomeIcon icon={faXmark} className="mr-1" /> Cancel
+              × cancel
             </button>
           </div>
         </>
