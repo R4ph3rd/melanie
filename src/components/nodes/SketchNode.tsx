@@ -56,10 +56,23 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
   const { fitView } = useReactFlow()
 
   // ─── Node dimensions (controlled by NodeResizer) ──────────────────────────
-  // PREVIEW_W/H are the defaults for new nodes. Once resized, the user-chosen
-  // size is persisted on data.width/height.
-  const previewW = (data.width  ?? PREVIEW_W + 20) - 20  // node total minus side padding
-  const previewH = (data.height ?? PREVIEW_H)
+  const previewW = (data.width ?? PREVIEW_W + 20) - 20
+
+  // Track the preview container's rendered height so SketchPreview gets exact
+  // pixel dimensions even as the node is resized or params/axes change height.
+  const previewContainerRef = useRef<HTMLDivElement>(null)
+  const [measuredPreviewH, setMeasuredPreviewH] = useState(PREVIEW_H)
+
+  useEffect(() => {
+    const el = previewContainerRef.current
+    if (!el) return
+    const ro = new ResizeObserver(([entry]) => {
+      const h = entry.contentRect.height  // content-box height (excludes padding)
+      setMeasuredPreviewH(Math.max(60, h))
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
 
   const handleMaximize = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
@@ -319,7 +332,10 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
           ? `0 0 0 2px ${nodeAccent}30, 0 4px 24px rgba(0,0,0,0.7)`
           : '0 4px 24px rgba(0,0,0,0.5)',
         width: data.width ?? (PREVIEW_W + 20),
-        cursor:   isInteractiveTarget ? 'crosshair' : 'default',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        cursor: isInteractiveTarget ? 'crosshair' : 'default',
       }}
       onClick={handleNodeClick}
     >
@@ -331,7 +347,7 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
         handleStyle={{ width: 10, height: 10, borderRadius: 2, border: '2px solid white', background: '#111' }}
         lineStyle={{ display: 'none' }}
         onResize={(_, p) => {
-          store.updateSketchDims(id, p.width, p.height - 80)
+          store.updateSketchDims(id, p.width, p.height)
         }}
       />
 
@@ -388,8 +404,17 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
         </div>
       </div>
 
-      {/* Preview */}
-      <div style={{ width: previewW + 20, height: previewH + 10, padding: '5px 10px' }}>
+      {/* Preview — flex:1 so it fills whatever vertical space the resized node
+          provides; minHeight keeps a usable default on fresh (unresized) nodes. */}
+      <div
+        ref={previewContainerRef}
+        style={{
+          flex: 1,
+          minHeight: data.height ? 60 : PREVIEW_H + 10,
+          padding: '5px 10px',
+          overflow: 'hidden',
+        }}
+      >
         {data.code ? (
           <SketchPreview
             code={data.code}
@@ -397,12 +422,12 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
             isRunning={data.isRunning}
             generationKey={data.generationKey}
             width={previewW}
-            height={previewH}
+            height={measuredPreviewH}
           />
         ) : (
           <div
             className="flex items-center justify-center text-text-muted text-sm"
-            style={{ width: previewW, height: previewH, background: '#0a0a0a', borderRadius: 2 }}
+            style={{ width: previewW, height: measuredPreviewH, background: '#0a0a0a', borderRadius: 2 }}
           >
             <span className="animate-pulse">Waiting for generation…</span>
           </div>
