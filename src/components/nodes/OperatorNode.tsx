@@ -284,6 +284,7 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
         border: selected ? `1.5px solid ${borderColor}` : '1px solid #2a2a2a',
         borderRadius: 2,
         minWidth: 240,
+        height: '100%',
         boxShadow: selected
           ? `0 0 0 2px ${borderColor}25, 0 4px 20px rgba(0,0,0,0.6)`
           : '0 4px 20px rgba(0,0,0,0.5)',
