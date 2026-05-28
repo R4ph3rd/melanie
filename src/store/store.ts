@@ -318,7 +318,7 @@ export const useStore = create<MelanieStore>((set, get) => ({
 
   getSketchNode: (id) => {
     const n = get().nodes.find((n) => n.id === id && n.type === 'sketch')
-    return n?.type === 'sketch' ? (n.data as SketchNodeData) : undefined
+    return n ? (n.data as SketchNodeData) : undefined
   },
 
   nextSketchTitle: () => {

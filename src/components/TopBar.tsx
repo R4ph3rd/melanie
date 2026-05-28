@@ -8,7 +8,12 @@ import { useStore } from '../store/store'
 import { PROVIDERS } from '../api/providers'
 import ModelConnectModal from './ModelConnectModal'
 
-// ── Shared Tailwind strings ────────────────────────────────────────────────────
+const iconBtnStyle: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+  width: 28, height: 28, border: '2px solid #333', borderRadius: 2,
+  background: 'transparent', color: '#555', cursor: 'pointer', transition: 'all 0.1s',
+}
+
 const dropdownContentCls =
   'z-50 min-w-[8rem] overflow-hidden rounded border border-border bg-popover p-1 text-foreground shadow-popup ' +
   'data-[state=open]:animate-in data-[state=closed]:animate-out ' +
@@ -150,12 +155,7 @@ export default function TopBar() {
         {/* Options dropdown */}
         <DropdownMenuPrimitive.Root>
           <DropdownMenuPrimitive.Trigger asChild>
-            <button title="Options" style={{
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              width: 28, height: 28, border: '2px solid #333', borderRadius: 2,
-              background: 'transparent', color: '#555', cursor: 'pointer',
-              transition: 'all 0.1s',
-            }}
+            <button title="Options" style={iconBtnStyle}
             onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#8C49DF'; e.currentTarget.style.color = '#8C49DF' }}
             onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#333'; e.currentTarget.style.color = '#555' }}
             >
@@ -193,12 +193,7 @@ export default function TopBar() {
         {/* Help popover */}
         <PopoverPrimitive.Root open={helpOpen} onOpenChange={setHelpOpen}>
           <PopoverPrimitive.Trigger asChild>
-            <button title="Help" style={{
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              width: 28, height: 28, border: '2px solid #333', borderRadius: 2,
-              background: 'transparent', color: '#555', cursor: 'pointer',
-              transition: 'all 0.1s',
-            }}
+            <button title="Help" style={iconBtnStyle}
             onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#8C49DF'; e.currentTarget.style.color = '#8C49DF' }}
             onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#333'; e.currentTarget.style.color = '#555' }}
             >
