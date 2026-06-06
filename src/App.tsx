@@ -15,6 +15,18 @@ export default function App() {
   const activeCodeNodeId    = useStore((s) => s.activeCodeNodeId)
   const setActiveCodeNodeId = useStore((s) => s.setActiveCodeNodeId)
 
+  // Capture output(channel, value) calls from sketch iframes and route them into the signal graph.
+  useEffect(() => {
+    const handle = (e: MessageEvent) => {
+      const d = e.data
+      if (d?.type === 'sketch-output' && d.nodeId && typeof d.value === 'number') {
+        useStore.getState().setSignalValue(d.nodeId, d.channel, d.value)
+      }
+    }
+    window.addEventListener('message', handle)
+    return () => window.removeEventListener('message', handle)
+  }, [])
+
   const [codeWidth,  setCodeWidth]  = useState(CODE_W_DEFAULT)
   const [isDragging, setIsDragging] = useState(false)
   const showCode = !!activeCodeNodeId

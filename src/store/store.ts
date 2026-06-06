@@ -11,17 +11,19 @@ import type {
   AppEdge,
   SketchNodeData,
   OperatorNodeData,
+  SourceNodeData,
+  SourceType,
   Parameter,
   LibraryType,
   OperatorType,
   SemanticAxis,
+  SignalBinding,
 } from '../utils/types'
 import { CONCENTRIC_CIRCLES, TORUS } from '../utils/templates'
 import { extractParameters, updateParameterInCode, applySemanticLabels } from '../utils/codeUtils'
 import { defaultProviderAndModel } from '../api/providers'
 
-// ─── LocalStorage keys ────────────────────────────────────────────────────────
-const STORAGE_KEYS     = 'melanie_api_keys'    // JSON: Record<providerId, apiKey>
+const STORAGE_KEYS     = 'melanie_api_keys'
 const STORAGE_PROVIDER = 'melanie_provider'
 const STORAGE_MODEL    = 'melanie_model'
 
@@ -31,7 +33,6 @@ function loadKeys(): Record<string, string> {
 
 const { providerId: DEFAULT_PROVIDER, modelId: DEFAULT_MODEL } = defaultProviderAndModel()
 
-// ─── Initial graph ────────────────────────────────────────────────────────────
 const rootCode   = CONCENTRIC_CIRCLES
 const rootParams = applySemanticLabels(extractParameters(rootCode), {
   numCircles:   'How many rings',
@@ -42,30 +43,18 @@ const rootParams = applySemanticLabels(extractParameters(rootCode), {
 
 const initialNodes: AppNode[] = [
   {
-    id: 'root',
-    type: 'sketch',
-    position: { x: 80, y: 80 },
-    data: {
-      title: 'Sketch 0',
-      code: rootCode,
-      library: 'p5js',
-      parameters: rootParams,
-      isRunning: true,
-      generationKey: 0,
-    },
+    id: 'root', type: 'sketch', position: { x: 80, y: 80 },
+    data: { title: 'Sketch 0', code: rootCode, library: 'p5js', parameters: rootParams, isRunning: true, generationKey: 0 },
   },
 ]
 
-// ─── Parameter-drag state (shared across nodes via store) ─────────────────────
 export interface DraggingParam {
   sourceNodeId: string
   param: Parameter
   sourceCode: string
 }
 
-// ─── Store interface ──────────────────────────────────────────────────────────
 interface MelanieStore {
-  // Multi-provider auth
   apiKeys:    Record<string, string>
   providerId: string
   modelId:    string
@@ -74,42 +63,35 @@ interface MelanieStore {
   setModel:     (modelId: string) => void
   getActiveKey: () => string
 
-  // ReactFlow graph
   nodes: AppNode[]
   edges: AppEdge[]
   onNodesChange: OnNodesChange<AppNode>
   onEdgesChange: OnEdgesChange<AppEdge>
 
-  // UI state
   activeCodeNodeId:    string | null
   mergingSourceId:     string | null
   pendingOpType:       'merge' | 'diff' | null
   draggingParam:       DraggingParam | null
   pendingToolbarOp:    OperatorType | null
-  backgroundSketchId:  string | null   // sketch shown behind the whole canvas
+  backgroundSketchId:  string | null
   setActiveCodeNodeId:   (id: string | null) => void
   setMergingSourceId:    (id: string | null, opType?: 'merge' | 'diff') => void
   setDraggingParam:      (p: DraggingParam | null) => void
   setPendingToolbarOp:   (op: OperatorType | null) => void
   setBackgroundSketchId: (id: string | null) => void
 
-  // Node CRUD
   addSketchNode: (opts: {
     code?: string; library?: LibraryType
     position?: { x: number; y: number }; title?: string; sourcePrompt?: string
     semanticLabels?: Record<string, string>
   }) => string
-
-  addOperatorNode: (opts: {
-    operatorType: OperatorType; sourceNodeIds: string[]
-    position: { x: number; y: number }
-  }) => string
-
+  addOperatorNode: (opts: { operatorType: OperatorType; sourceNodeIds: string[]; position: { x: number; y: number } }) => string
+  addSourceNode:   (opts: { sourceType: SourceType; position: { x: number; y: number } }) => string
   addEdge: (edge: AppEdge) => void
 
-  updateSketchCode:        (id: string, code: string) => void
-  updateSketchParameters:  (id: string, params: Parameter[]) => void
-  patchSketchParameter:    (id: string, name: string, value: number) => void
+  updateSketchCode:       (id: string, code: string) => void
+  updateSketchParameters: (id: string, params: Parameter[]) => void
+  patchSketchParameter:   (id: string, name: string, value: number) => void
   updateSketchTitle:      (id: string, title: string) => void
   updateSketchRunning:    (id: string, running: boolean) => void
   updateSketchDims:       (id: string, width: number, height: number) => void
@@ -118,23 +100,27 @@ interface MelanieStore {
   setAxesGenerating:      (id: string, generating: boolean) => void
   reloadSketch:           (id: string) => void
   updateOperator:         (id: string, data: Partial<OperatorNodeData>) => void
+  updateSource:           (id: string, data: Partial<SourceNodeData>) => void
   deleteNode:             (id: string) => void
 
-  // Helpers
   getSketchNode:   (id: string) => SketchNodeData | undefined
   nextSketchTitle: () => string
   getNodePosition: (id: string) => { x: number; y: number } | undefined
-
-  // Canvas-level actions
   resetCanvas: () => void
 
-  // Compat shim (old callers used apiKey / model)
+  // Signal flow
+  signalValues:        Record<string, number>    // `${nodeId}:${channel}` → value
+  signalBindings:      SignalBinding[]
+  setSignalValue:      (nodeId: string, channel: string, value: number) => void
+  addSignalBinding:    (binding: Omit<SignalBinding, 'id'>) => string
+  removeSignalBinding: (id: string) => void
+
+  // Compat shims
   apiKey: string
   model:  string
 }
 
 export const useStore = create<MelanieStore>((set, get) => ({
-  // ── auth ──
   apiKeys:    loadKeys(),
   providerId: localStorage.getItem(STORAGE_PROVIDER) ?? DEFAULT_PROVIDER,
   modelId:    localStorage.getItem(STORAGE_MODEL)    ?? DEFAULT_MODEL,
@@ -144,21 +130,13 @@ export const useStore = create<MelanieStore>((set, get) => ({
     localStorage.setItem(STORAGE_KEYS, JSON.stringify(next))
     set({ apiKeys: next })
   },
-  setProvider: (pid) => {
-    localStorage.setItem(STORAGE_PROVIDER, pid)
-    set({ providerId: pid })
-  },
-  setModel: (mid) => {
-    localStorage.setItem(STORAGE_MODEL, mid)
-    set({ modelId: mid })
-  },
+  setProvider: (pid) => { localStorage.setItem(STORAGE_PROVIDER, pid); set({ providerId: pid }) },
+  setModel:    (mid) => { localStorage.setItem(STORAGE_MODEL, mid);    set({ modelId: mid }) },
   getActiveKey: () => get().apiKeys[get().providerId] ?? '',
 
-  // ── compat shims ──
   get apiKey() { return get().apiKeys[get().providerId] ?? '' },
   get model()  { return get().modelId },
 
-  // ── graph ──
   nodes: initialNodes,
   edges: [],
   onNodesChange: (changes) =>
@@ -166,7 +144,6 @@ export const useStore = create<MelanieStore>((set, get) => ({
   onEdgesChange: (changes) =>
     set((s) => ({ edges: applyEdgeChanges(changes, s.edges) })),
 
-  // ── UI ──
   activeCodeNodeId:   null,
   mergingSourceId:    null,
   pendingOpType:      null,
@@ -181,34 +158,40 @@ export const useStore = create<MelanieStore>((set, get) => ({
   setPendingToolbarOp:   (op) => set({ pendingToolbarOp: op }),
   setBackgroundSketchId: (id) => set({ backgroundSketchId: id }),
 
-  // ── node CRUD ──
   addSketchNode: ({ code, library = 'p5js', position = { x: 200, y: 200 }, title, sourcePrompt, semanticLabels }) => {
     const id = nanoid(8)
-    const resolved = code ?? (library === 'p5js' ? CONCENTRIC_CIRCLES : TORUS)
+    const resolved   = code ?? (library === 'p5js' ? CONCENTRIC_CIRCLES : TORUS)
     const baseParams = extractParameters(resolved)
-    const parameters = semanticLabels
-      ? applySemanticLabels(baseParams, semanticLabels)
-      : baseParams
-    const newNode: AppNode = {
-      id, type: 'sketch', position,
-      data: {
-        title: title ?? get().nextSketchTitle(),
-        code: resolved, library,
-        parameters,
-        isRunning: true, sourcePrompt, generationKey: 0,
-      },
-    }
-    set((s) => ({ nodes: [...s.nodes, newNode] }))
+    const parameters = semanticLabels ? applySemanticLabels(baseParams, semanticLabels) : baseParams
+    set((s) => ({
+      nodes: [...s.nodes, {
+        id, type: 'sketch', position,
+        data: { title: title ?? get().nextSketchTitle(), code: resolved, library, parameters, isRunning: true, sourcePrompt, generationKey: 0 },
+      } as AppNode],
+    }))
     return id
   },
 
   addOperatorNode: ({ operatorType, sourceNodeIds, position }) => {
     const id = nanoid(8)
-    const newNode: AppNode = {
-      id, type: 'operator', position,
-      data: { operatorType, prompt: '', isGenerating: false, suggestions: [], sourceNodeIds },
-    }
-    set((s) => ({ nodes: [...s.nodes, newNode] }))
+    set((s) => ({
+      nodes: [...s.nodes, {
+        id, type: 'operator', position,
+        data: { operatorType, prompt: '', isGenerating: false, suggestions: [], sourceNodeIds },
+      } as AppNode],
+    }))
+    return id
+  },
+
+  addSourceNode: ({ sourceType, position }) => {
+    const id = nanoid(8)
+    const defaults =
+      sourceType === 'lfo'   ? { rate: 0.5, shape: 'sine', amplitude: 1, offset: 0, value: 0 } :
+      sourceType === 'clock' ? { bpm: 120, value: 0 } :
+      /* audio */               { value: 0 }
+    set((s) => ({
+      nodes: [...s.nodes, { id, type: 'source', position, data: { sourceType, ...defaults } } as AppNode],
+    }))
     return id
   },
 
@@ -230,16 +213,12 @@ export const useStore = create<MelanieStore>((set, get) => ({
       ),
     })),
 
-  // Patch a single parameter value without recalculating min/max bounds.
-  // This keeps the slider range stable while the user is dragging.
   patchSketchParameter: (id, name, value) =>
     set((s) => ({
       nodes: s.nodes.map((n) => {
         if (n.id !== id || n.type !== 'sketch') return n
         const newCode   = updateParameterInCode(n.data.code as string, name, value)
-        const newParams = (n.data.parameters as Parameter[]).map((p) =>
-          p.name === name ? { ...p, value } : p
-        )
+        const newParams = (n.data.parameters as Parameter[]).map((p) => p.name === name ? { ...p, value } : p)
         return { ...n, data: { ...n.data, code: newCode, parameters: newParams } }
       }),
     })),
@@ -279,17 +258,14 @@ export const useStore = create<MelanieStore>((set, get) => ({
       nodes: s.nodes.map((n) => {
         if (n.id !== id || n.type !== 'sketch') return n
         const axes = (n.data.semanticAxes as SemanticAxis[] | undefined) ?? []
-        const next = axes.map((a) => a.id === axisId ? { ...a, value } : a)
-        return { ...n, data: { ...n.data, semanticAxes: next } }
+        return { ...n, data: { ...n.data, semanticAxes: axes.map((a) => a.id === axisId ? { ...a, value } : a) } }
       }),
     })),
 
   setAxesGenerating: (id, generating) =>
     set((s) => ({
       nodes: s.nodes.map((n) =>
-        n.id === id && n.type === 'sketch'
-          ? { ...n, data: { ...n.data, axesGenerating: generating } }
-          : n
+        n.id === id && n.type === 'sketch' ? { ...n, data: { ...n.data, axesGenerating: generating } } : n
       ),
     })),
 
@@ -309,10 +285,18 @@ export const useStore = create<MelanieStore>((set, get) => ({
       ),
     })),
 
+  updateSource: (id, data) =>
+    set((s) => ({
+      nodes: s.nodes.map((n) =>
+        n.id === id && n.type === 'source' ? { ...n, data: { ...n.data, ...data } } : n
+      ),
+    })),
+
   deleteNode: (id) =>
     set((s) => ({
-      nodes: s.nodes.filter((n) => n.id !== id),
-      edges: s.edges.filter((e) => e.source !== id && e.target !== id),
+      nodes:          s.nodes.filter((n) => n.id !== id),
+      edges:          s.edges.filter((e) => e.source !== id && e.target !== id),
+      signalBindings: s.signalBindings.filter((b) => b.sourceNodeId !== id && b.targetNodeId !== id),
       backgroundSketchId: s.backgroundSketchId === id ? null : s.backgroundSketchId,
     })),
 
@@ -321,23 +305,29 @@ export const useStore = create<MelanieStore>((set, get) => ({
     return n ? (n.data as SketchNodeData) : undefined
   },
 
-  nextSketchTitle: () => {
-    const count = get().nodes.filter((n) => n.type === 'sketch').length
-    return `Sketch ${count}`
-  },
+  nextSketchTitle: () => `Sketch ${get().nodes.filter((n) => n.type === 'sketch').length}`,
 
   getNodePosition: (id) => get().nodes.find((n) => n.id === id)?.position,
 
-  resetCanvas: () => {
-    set({
-      nodes: [],
-      edges: [],
-      activeCodeNodeId:   null,
-      mergingSourceId:    null,
-      pendingOpType:      null,
-      draggingParam:      null,
-      pendingToolbarOp:   null,
-      backgroundSketchId: null,
-    })
+  resetCanvas: () => set({
+    nodes: [], edges: [], signalBindings: [], signalValues: {},
+    activeCodeNodeId: null, mergingSourceId: null, pendingOpType: null,
+    draggingParam: null, pendingToolbarOp: null, backgroundSketchId: null,
+  }),
+
+  // ── Signal flow ───────────────────────────────────────────────────────────────
+  signalValues:   {},
+  signalBindings: [],
+
+  setSignalValue: (nodeId, channel, value) =>
+    set((s) => ({ signalValues: { ...s.signalValues, [`${nodeId}:${channel}`]: value } })),
+
+  addSignalBinding: (binding) => {
+    const id = nanoid(6)
+    set((s) => ({ signalBindings: [...s.signalBindings, { ...binding, id }] }))
+    return id
   },
+
+  removeSignalBinding: (id) =>
+    set((s) => ({ signalBindings: s.signalBindings.filter((b) => b.id !== id) })),
 }))

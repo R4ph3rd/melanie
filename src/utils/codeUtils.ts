@@ -100,7 +100,26 @@ function escapeRegex(s: string) {
 
 // ─── iframe srcdoc builder ────────────────────────────────────────────────────
 
-export function buildIframeSrcdoc(code: string, library: LibraryType): string {
+// Promote let/const param declarations to var so they're window-accessible for live-var updates.
+function promoteParamVars(code: string, params: Parameter[]): string {
+  let out = code
+  for (const p of params) {
+    out = out.replace(
+      new RegExp(`(?:let|const)(\\s+${escapeRegex(p.name)}\\s*=\\s*[-\\d.]+\\s*;)`, 'gm'),
+      'var$1',
+    )
+  }
+  return out
+}
+
+export function buildIframeSrcdoc(code: string, library: LibraryType, nodeId?: string): string {
+  const params      = extractParameters(code)
+  const patchedCode = promoteParamVars(code, params)
+  // output(channel, value) lets sketches push scalar signals to the graph.
+  const outputFn    = nodeId
+    ? `window.output=function(ch,v){parent.postMessage({type:'sketch-output',nodeId:${JSON.stringify(nodeId)},channel:ch,value:+v},'*')};`
+    : 'window.output=function(){};'
+
   if (library === 'p5js') {
     return `<!DOCTYPE html><html><head>
 <meta charset="utf-8">
@@ -108,12 +127,15 @@ export function buildIframeSrcdoc(code: string, library: LibraryType): string {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.0/p5.min.js"></script>
 </head><body>
 <script>
+${outputFn}
 window.addEventListener('message',function(e){
-  if(e.data==='pause'&&typeof noLoop==='function')noLoop();
-  if(e.data==='resume'&&typeof loop==='function')loop();
-  if(e.data==='reset')window.location.reload();
+  var d=e.data;
+  if(d==='pause'&&typeof noLoop==='function'){noLoop();return}
+  if(d==='resume'&&typeof loop==='function'){loop();return}
+  if(d==='reset'){window.location.reload();return}
+  if(d&&typeof d==='object'&&d.type==='live-var'&&d.name in window)window[d.name]=d.value;
 });
-${code}
+${patchedCode}
 </script></body></html>`
   }
   return `<!DOCTYPE html><html><head>
@@ -122,17 +144,20 @@ ${code}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
 </head><body>
 <script>
-let _paused=false;
+${outputFn}
+var _paused=false;
 window.addEventListener('message',function(e){
-  if(e.data==='pause')_paused=true;
-  if(e.data==='resume')_paused=false;
-  if(e.data==='reset')window.location.reload();
+  var d=e.data;
+  if(d==='pause'){_paused=true;return}
+  if(d==='resume'){_paused=false;return}
+  if(d==='reset'){window.location.reload();return}
+  if(d&&typeof d==='object'&&d.type==='live-var'&&d.name in window)window[d.name]=d.value;
 });
 const _raf=window.requestAnimationFrame;
 window.requestAnimationFrame=function(cb){
   return _raf(function(t){if(!_paused)cb(t);else _raf(arguments.callee);});
 };
-${code}
+${patchedCode}
 </script></body></html>`
 }
 

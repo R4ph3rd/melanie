@@ -1,6 +1,7 @@
 import { useRef, useEffect, memo } from 'react'
 import type { LibraryType } from '../utils/types'
 import { buildIframeSrcdoc } from '../utils/codeUtils'
+import { useStore } from '../store/store'
 
 interface Props {
   code: string
@@ -9,23 +10,43 @@ interface Props {
   generationKey: number
   width?: number
   height?: number
+  nodeId?: string
 }
 
 const SketchPreview = memo(function SketchPreview({
-  code,
-  library,
-  isRunning,
-  generationKey,
-  width = 260,
-  height = 200,
+  code, library, isRunning, generationKey, width = 260, height = 200, nodeId,
 }: Props) {
   const iframeRef = useRef<HTMLIFrameElement>(null)
-  const srcdoc = buildIframeSrcdoc(code, library)
+  const srcdoc    = buildIframeSrcdoc(code, library, nodeId)
 
-  // Send pause/resume messages without reloading the iframe
   useEffect(() => {
     iframeRef.current?.contentWindow?.postMessage(isRunning ? 'resume' : 'pause', '*')
   }, [isRunning])
+
+  // Forward live signal bindings to the iframe each animation frame — no React
+  // re-renders needed, we read store state directly inside the RAF loop.
+  useEffect(() => {
+    if (!nodeId) return
+    let raf: number
+    const tick = () => {
+      const { signalBindings, signalValues } = useStore.getState()
+      const bindings = signalBindings.filter((b) => b.targetNodeId === nodeId)
+      if (bindings.length > 0) {
+        const win = iframeRef.current?.contentWindow
+        if (win) {
+          for (const b of bindings) {
+            win.postMessage(
+              { type: 'live-var', name: b.paramName, value: signalValues[`${b.sourceNodeId}:${b.channel}`] ?? 0 },
+              '*',
+            )
+          }
+        }
+      }
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [nodeId])
 
   return (
     <iframe

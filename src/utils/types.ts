@@ -2,27 +2,36 @@ import type { Node, Edge } from '@xyflow/react'
 
 export type LibraryType = 'p5js' | 'threejs'
 export type OperatorType = 'modify' | 'duplicate' | 'merge' | 'diff' | 'extract'
+export type SourceType   = 'lfo' | 'audio' | 'clock'
+export type LFOShape     = 'sine' | 'square' | 'saw' | 'triangle'
 
 export interface Parameter {
   name: string          // code variable name, e.g. "circleSize"
   label: string         // semantic label, e.g. "Circle Size"
-  semanticLabel: string // richer LLM-generated label, e.g. "controls how big the rings are"
+  semanticLabel: string // richer LLM-generated label
   value: number
   min: number
   max: number
   step: number
 }
 
-// Semantic axis — a Photoshop-style "latent knob" that re-prompts the model
-// rather than tweaking a variable. The LLM proposes 3-4 axes per sketch with
-// two opposing poles; scrubbing the slider interpolates between them.
+// Semantic axis — a latent knob that re-prompts the model rather than tweaking a variable.
 export interface SemanticAxis {
   id: string
-  leftLabel:  string   // e.g. "chaos"
-  rightLabel: string   // e.g. "order"
-  leftPrompt:  string  // one-line description of the left pole
-  rightPrompt: string  // one-line description of the right pole
-  value: number        // 0..1 (0 = full left, 0.5 = neutral, 1 = full right)
+  leftLabel:  string
+  rightLabel: string
+  leftPrompt:  string
+  rightPrompt: string
+  value: number  // 0..1
+}
+
+// Signal binding: a live wire from a source node channel to a sketch parameter.
+export interface SignalBinding {
+  id:           string
+  sourceNodeId: string
+  channel:      string   // 'value', 'level', 'beat', 'phase', or sketch output channel
+  targetNodeId: string
+  paramName:    string
 }
 
 export interface SketchNodeData extends Record<string, unknown> {
@@ -34,14 +43,11 @@ export interface SketchNodeData extends Record<string, unknown> {
   sourcePrompt?: string
   error?: string
   generationKey: number
-  // Optional persisted node dimensions (controlled by NodeResizer)
   width?:  number
   height?: number
-  // LLM-proposed latent axes (chaos/order, dense/sparse, …) — scrubbing
-  // them re-prompts the model rather than tweaking a variable.
   semanticAxes?:  SemanticAxis[]
-  axesBaseline?:  string   // code snapshot the axes were generated against
-  axesGenerating?: boolean // true while LLM is regenerating from a scrub
+  axesBaseline?:  string
+  axesGenerating?: boolean
 }
 
 export interface OperatorNodeData extends Record<string, unknown> {
@@ -52,16 +58,29 @@ export interface OperatorNodeData extends Record<string, unknown> {
   diffText?: string
   sourceNodeIds: string[]
   targetNodeId?: string
-  autoGenerate?: boolean   // triggers generation on mount (e.g. param-transfer)
-  paramTransferLabel?: string  // human-readable label carried for param-transfer ops
+  autoGenerate?: boolean
+  paramTransferLabel?: string
+}
+
+export interface SourceNodeData extends Record<string, unknown> {
+  sourceType: SourceType
+  // LFO
+  rate?:      number    // Hz, 0.05–10
+  shape?:     LFOShape
+  amplitude?: number    // output scale 0–1
+  offset?:    number    // center shift 0–1
+  // Clock
+  bpm?: number          // 20–300
+  // Runtime (updated each frame)
+  value?: number
 }
 
 export type SketchNode   = Node<SketchNodeData, 'sketch'>
 export type OperatorNode = Node<OperatorNodeData, 'operator'>
-export type AppNode      = SketchNode | OperatorNode
+export type SourceNode   = Node<SourceNodeData, 'source'>
+export type AppNode      = SketchNode | OperatorNode | SourceNode
 
-// Edge kinds: 'normal' | 'param-transfer' (light dashed, background)
-export type AppEdgeKind = 'normal' | 'param-transfer'
+export type AppEdgeKind = 'normal' | 'param-transfer' | 'signal'
 export type AppEdge     = Edge & { data?: { kind?: AppEdgeKind } }
 
 export interface ExampleSketch {
@@ -70,8 +89,5 @@ export interface ExampleSketch {
   description: string
   code: string
   library: LibraryType
-  // Optional human-friendly labels keyed by variable name. Applied to the
-  // extracted parameters when the example is added to the canvas, so sliders
-  // show readable labels instead of technical camelCase names.
   semanticLabels?: Record<string, string>
 }
