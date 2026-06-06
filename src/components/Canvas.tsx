@@ -10,17 +10,18 @@ import Icon from './ui/Icon'
 import { useStore } from '../store/store'
 import SketchNode from './nodes/SketchNode'
 import OperatorNode from './nodes/OperatorNode'
+import SourceNode from './nodes/SourceNode'
 import OpsToolbar from './OpsToolbar'
 import SketchPreview from './SketchPreview'
 import { EXAMPLE_DRAG_MIME } from './ExamplesPanel'
 import { EXAMPLE_SKETCHES } from '../utils/templates'
-import type { OperatorType } from '../utils/types'
+import type { OperatorType, SourceType } from '../utils/types'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface OpMenuEntry { type: OperatorType; label: string; icon: string; color: string }
 
-const nodeTypes: NodeTypes = { sketch: SketchNode, operator: OperatorNode }
+const nodeTypes: NodeTypes = { sketch: SketchNode, operator: OperatorNode, source: SourceNode }
 
 const CONN_OPS: OpMenuEntry[] = [
   { type: 'modify',    label: 'Modify',  icon: 'modify',    color: '#8C49DF' },
@@ -106,13 +107,26 @@ function FloatingMenu({ x, y, title, onClose, children }: {
 export default function Canvas() {
   const nodes         = useStore((s) => s.nodes)
   const edges         = useStore((s) => s.edges)
-  const onNodesChange = useStore((s) => s.onNodesChange)
-  const onEdgesChange = useStore((s) => s.onEdgesChange)
+  const onNodesChange    = useStore((s) => s.onNodesChange)
+  const onEdgesChangeRaw = useStore((s) => s.onEdgesChange)
+  const onEdgesChange    = useCallback((changes: Parameters<typeof onEdgesChangeRaw>[0]) => {
+    // When a signal edge is deleted, also remove its binding.
+    for (const c of changes) {
+      if (c.type === 'remove') {
+        const edge = edges.find((e) => e.id === c.id)
+        if (edge?.data?.kind === 'signal' && edge.data.bindingId) {
+          store.removeSignalBinding(edge.data.bindingId as string)
+        }
+      }
+    }
+    onEdgesChangeRaw(changes)
+  }, [edges, onEdgesChangeRaw, store])
   const store         = useStore()
   const { screenToFlowPosition } = useReactFlow()
 
-  const [connOpsMenu, setConnOpsMenu] = useState<{ screenX: number; screenY: number; sourceNodeId: string } | null>(null)
-  const [mergeMenu,   setMergeMenu]   = useState<{ screenX: number; screenY: number; sourceNodeId: string; targetNodeId: string } | null>(null)
+  const [connOpsMenu,       setConnOpsMenu]       = useState<{ screenX: number; screenY: number; sourceNodeId: string } | null>(null)
+  const [mergeMenu,         setMergeMenu]         = useState<{ screenX: number; screenY: number; sourceNodeId: string; targetNodeId: string } | null>(null)
+  const [signalConnectMenu, setSignalConnectMenu] = useState<{ screenX: number; screenY: number; sourceNodeId: string; channel: string; targetNodeId: string } | null>(null)
 
   const lastPtr               = useRef({ x: 0, y: 0 })
   const draggingFromNode      = useRef<{ nodeId: string; nodeType: string } | null>(null)
@@ -160,6 +174,10 @@ export default function Canvas() {
       const tgtNode = nodes.find((n) => n.id === connection.target)
       if (srcNode?.type === 'sketch' && tgtNode?.type === 'sketch') {
         setMergeMenu({ screenX: lastPtr.current.x, screenY: lastPtr.current.y, sourceNodeId: connection.source, targetNodeId: connection.target })
+        return
+      }
+      if (srcNode?.type === 'source' && tgtNode?.type === 'sketch') {
+        setSignalConnectMenu({ screenX: lastPtr.current.x, screenY: lastPtr.current.y, sourceNodeId: connection.source, channel: connection.sourceHandle ?? 'value', targetNodeId: connection.target })
         return
       }
       store.addEdge({ id: nanoid(6), ...connection })
@@ -225,15 +243,25 @@ export default function Canvas() {
 
   const styledEdges = useMemo(
     () => edges.map((e) => {
-      const isParamTransfer = e.data?.kind === 'param-transfer'
+      const kind = e.data?.kind
+      if (kind === 'signal') return {
+        ...e,
+        style: { stroke: '#0ea5e9', strokeWidth: 1.5, strokeDasharray: '6 3' },
+        animated: true,
+        zIndex: 1,
+      }
+      if (kind === 'param-transfer') return {
+        ...e,
+        style: { stroke: '#555', strokeWidth: 1, strokeDasharray: '4 4', opacity: 0.5 },
+        animated: false,
+        zIndex: -1,
+      }
       return {
         ...e,
-        style: isParamTransfer
-          ? { stroke: '#555', strokeWidth: 1, strokeDasharray: '4 4', opacity: 0.5 }
-          : { stroke: '#4a4a6a', strokeWidth: 1.5 },
-        markerEnd: isParamTransfer ? undefined : { type: MarkerType.ArrowClosed, color: '#4a4a6a' },
+        style: { stroke: '#4a4a6a', strokeWidth: 1.5 },
+        markerEnd: { type: MarkerType.ArrowClosed, color: '#4a4a6a' },
         animated: false,
-        zIndex:   isParamTransfer ? -1 : 0,
+        zIndex: 0,
       }
     }),
     [edges],
@@ -334,6 +362,33 @@ export default function Canvas() {
           ))}
         </FloatingMenu>
       )}
+
+      {signalConnectMenu && (() => {
+        const targetData = store.getSketchNode(signalConnectMenu.targetNodeId)
+        const params = (targetData?.parameters ?? []) as import('../utils/types').Parameter[]
+        return (
+          <FloatingMenu x={signalConnectMenu.screenX} y={signalConnectMenu.screenY} title={`bind "${signalConnectMenu.channel}" to`} onClose={() => setSignalConnectMenu(null)}>
+            {params.length === 0 && (
+              <p style={{ fontSize: 11, color: '#555', padding: '4px 6px', margin: 0 }}>No parameters on target sketch</p>
+            )}
+            {params.map((p) => (
+              <button key={p.name} onClick={() => {
+                const { sourceNodeId, channel, targetNodeId } = signalConnectMenu
+                const bindId = store.addSignalBinding({ sourceNodeId, channel, targetNodeId, paramName: p.name })
+                store.addEdge({ id: `sig-${bindId}`, source: sourceNodeId, target: targetNodeId, sourceHandle: channel, data: { kind: 'signal', bindingId: bindId } })
+                setSignalConnectMenu(null)
+              }}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 8px', width: '100%', textAlign: 'left', border: '1px solid #2a2a2a', borderRadius: 3, background: 'transparent', color: '#a0a0a0', fontFamily: 'var(--font-sans)', fontSize: 12, cursor: 'pointer', transition: 'all 0.1s' }}
+                onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#0ea5e9'; e.currentTarget.style.color = '#0ea5e9' }}
+                onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#2a2a2a'; e.currentTarget.style.color = '#a0a0a0' }}
+              >
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: '#555' }}>{p.name}</span>
+                <span className="truncate">{p.semanticLabel || p.label}</span>
+              </button>
+            ))}
+          </FloatingMenu>
+        )
+      })()}
     </div>
   )
 }

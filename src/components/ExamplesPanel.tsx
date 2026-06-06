@@ -3,8 +3,9 @@ import { useReactFlow } from '@xyflow/react'
 import { EXAMPLE_SKETCHES } from '../utils/templates'
 import { useStore } from '../store/store'
 import SketchPreview from './SketchPreview'
+import Icon from './ui/Icon'
 import { Badge } from './ui/badge'
-import type { LibraryType } from '../utils/types'
+import type { LibraryType, SourceType } from '../utils/types'
 
 const THUMB_H = 80
 
@@ -42,14 +43,13 @@ function SketchThumbnail({ sketch }: { sketch: typeof EXAMPLE_SKETCHES[0] }) {
   )
 }
 
-function NewSketchButton({ library, label, color, position }: {
-  library: LibraryType; label: string; color: string; position: { x: number; y: number }
+function NewNodeButton({ label, color, icon, onClick }: {
+  label: string; color: string; icon?: string; onClick: () => void
 }) {
-  const store = useStore()
   const [hov, setHov] = useState(false)
   return (
     <button
-      onClick={() => store.addSketchNode({ library, position })}
+      onClick={onClick}
       onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
       style={{
         display: 'flex', alignItems: 'center', gap: 8,
@@ -60,7 +60,9 @@ function NewSketchButton({ library, label, color, position }: {
         cursor: 'pointer', transition: 'all 0.1s',
       }}
     >
-      <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, border: `2px solid ${color}66`, borderRadius: 2, fontSize: 13, fontWeight: 700, flexShrink: 0 }}>+</span>
+      <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, border: `2px solid ${color}66`, borderRadius: 2, fontSize: 13, fontWeight: 700, flexShrink: 0 }}>
+        {icon ? <Icon name={icon} size={11} /> : '+'}
+      </span>
       {label}
     </button>
   )
@@ -136,9 +138,20 @@ export default function ExamplesPanel() {
 
       <div style={S.footer}>
         <p style={{ fontSize: 10, color: '#444', marginBottom: 6, fontWeight: 500 }}>New blank sketch</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 10 }}>
+          <NewNodeButton label="p5.js sketch"    color="#10b981" onClick={() => store.addSketchNode({ library: 'p5js',    position: { x: 200, y: 200 } })} />
+          <NewNodeButton label="three.js sketch" color="#3b82f6" onClick={() => store.addSketchNode({ library: 'threejs', position: { x: 200, y: 300 } })} />
+        </div>
+        <p style={{ fontSize: 10, color: '#444', marginBottom: 6, fontWeight: 500 }}>Signal sources</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <NewSketchButton library="p5js"    label="p5.js sketch"    color="#10b981" position={{ x: 200, y: 200 }} />
-          <NewSketchButton library="threejs" label="three.js sketch" color="#3b82f6" position={{ x: 200, y: 300 }} />
+          {([
+            { sourceType: 'lfo'   as SourceType, label: 'LFO',         color: '#0ea5e9', icon: 'lfo'   },
+            { sourceType: 'audio' as SourceType, label: 'Audio Level', color: '#10b981', icon: 'audio' },
+            { sourceType: 'clock' as SourceType, label: 'Clock',       color: '#f59e0b', icon: 'clock' },
+          ]).map(({ sourceType, label, color, icon }) => (
+            <NewNodeButton key={sourceType} label={label} color={color} icon={icon}
+              onClick={() => store.addSourceNode({ sourceType, position: { x: 200, y: 200 } })} />
+          ))}
         </div>
       </div>
     </div>

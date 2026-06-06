@@ -5,6 +5,7 @@ import {
   Explore, Reset, ChildNode, ArrowsHorizontal,
   Flash, InProgress, Settings, Plug, Help, View, ViewOff, Checkmark,
   StopFilled, ZoomIn, ZoomOut, Locked, Unlocked, ChevronDown,
+  Waveform, Microphone, Timer,
 } from '@carbon/icons-react'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -60,6 +61,11 @@ const ICONS: Record<string, React.ElementType<any>> = {
   'view':               View,
   'view-off':           ViewOff,
   'checkmark':          Checkmark,
+
+  // Source nodes
+  'lfo':                Waveform,
+  'audio':              Microphone,
+  'clock':              Timer,
 }
 
 export type IconName = keyof typeof ICONS
