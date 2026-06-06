@@ -34,7 +34,7 @@ const S = {
   row:         { display: 'flex', alignItems: 'center', gap: 6 } as React.CSSProperties,
   slider:      { flex: 1, height: 3, cursor: 'pointer' } as React.CSSProperties,
   val:         { fontSize: 10, fontFamily: 'var(--font-mono)', color: '#888', width: 32, textAlign: 'right' as const },
-  handleLabel: { position: 'absolute', right: 16, fontSize: 9, fontFamily: 'var(--font-mono)', color: '#666', pointerEvents: 'none' as const },
+  handleLabel: { position: 'absolute' as const, right: 16, fontSize: 9, fontFamily: 'var(--font-mono)', color: '#666', pointerEvents: 'none' as const },
 }
 
 const SOURCE_META = {

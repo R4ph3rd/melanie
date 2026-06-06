@@ -275,7 +275,7 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
         style={{ flex: 1, minHeight: data.height ? 60 : PREVIEW_H + 10, padding: '5px 10px', overflow: 'hidden' }}>
         {data.code ? (
           <SketchPreview code={data.code} library={data.library} isRunning={data.isRunning}
-            generationKey={data.generationKey} width={previewW} height={measuredPreviewH} />
+            generationKey={data.generationKey} width={previewW} height={measuredPreviewH} nodeId={id} />
         ) : (
           <div className="flex items-center justify-center text-text-muted text-sm"
             style={{ width: previewW, height: measuredPreviewH, background: '#0a0a0a', borderRadius: 2 }}>

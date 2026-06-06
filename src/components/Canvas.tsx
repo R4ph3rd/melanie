@@ -41,8 +41,8 @@ const CanvasControls = memo(function CanvasControls() {
   const { zoomIn, zoomOut, fitView } = useReactFlow()
   const [hov, setHov] = useState<string | null>(null)
   const btns = [
-    { id: 'zoom-in',     title: 'Zoom in',  action: zoomIn },
-    { id: 'zoom-out',    title: 'Zoom out', action: zoomOut },
+    { id: 'zoom-in',     title: 'Zoom in',  action: () => zoomIn() },
+    { id: 'zoom-out',    title: 'Zoom out', action: () => zoomOut() },
     { id: 'zoom-to-fit', title: 'Fit view', action: () => fitView({ padding: 0.15, duration: 300 }) },
   ]
   return (
@@ -109,6 +109,7 @@ export default function Canvas() {
   const edges         = useStore((s) => s.edges)
   const onNodesChange    = useStore((s) => s.onNodesChange)
   const onEdgesChangeRaw = useStore((s) => s.onEdgesChange)
+  const store         = useStore()
   const onEdgesChange    = useCallback((changes: Parameters<typeof onEdgesChangeRaw>[0]) => {
     // When a signal edge is deleted, also remove its binding.
     for (const c of changes) {
@@ -121,7 +122,6 @@ export default function Canvas() {
     }
     onEdgesChangeRaw(changes)
   }, [edges, onEdgesChangeRaw, store])
-  const store         = useStore()
   const { screenToFlowPosition } = useReactFlow()
 
   const [connOpsMenu,       setConnOpsMenu]       = useState<{ screenX: number; screenY: number; sourceNodeId: string } | null>(null)
