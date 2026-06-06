@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useStore } from './store/store'
+import { setSignalValue } from './store/signals'
 import TopBar from './components/TopBar'
 import Canvas from './components/Canvas'
 import ExamplesPanel from './components/ExamplesPanel'
@@ -20,7 +21,7 @@ export default function App() {
     const handle = (e: MessageEvent) => {
       const d = e.data
       if (d?.type === 'sketch-output' && d.nodeId && typeof d.value === 'number') {
-        useStore.getState().setSignalValue(d.nodeId, d.channel, d.value)
+        setSignalValue(d.nodeId, d.channel, d.value)
       }
     }
     window.addEventListener('message', handle)

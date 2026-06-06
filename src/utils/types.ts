@@ -1,35 +1,56 @@
 import type { Node, Edge } from '@xyflow/react'
 
-export type LibraryType = 'p5js' | 'threejs'
+export type LibraryType  = 'p5js' | 'threejs'
 export type OperatorType = 'modify' | 'duplicate' | 'merge' | 'diff' | 'extract'
-export type SourceType   = 'lfo' | 'audio' | 'clock'
 export type LFOShape     = 'sine' | 'square' | 'saw' | 'triangle'
 
+export type SourceType =
+  | 'lfo' | 'clock' | 'noise' | 'pattern' | 'random'
+  | 'audio' | 'audio-fft' | 'audio-beat'
+  | 'mouse' | 'keyboard' | 'scroll' | 'midi'
+  | 'webcam'
+  | 'constant'
+
+export const SOURCE_CHANNELS: Record<SourceType, string[]> = {
+  lfo:          ['value'],
+  clock:        ['phase', 'beat'],
+  noise:        ['value'],
+  pattern:      ['value', 'step'],
+  random:       ['value'],
+  audio:        ['level'],
+  'audio-fft':  ['sub', 'bass', 'mid', 'treble', 'presence'],
+  'audio-beat': ['beat', 'energy'],
+  mouse:        ['x', 'y', 'click', 'speed'],
+  keyboard:     ['held', 'press'],
+  scroll:       ['y', 'velocity'],
+  midi:         ['note', 'velocity', 'active', 'cc'],
+  webcam:       ['brightness', 'r', 'g', 'b', 'motion'],
+  constant:     ['value'],
+}
+
 export interface Parameter {
-  name: string          // code variable name, e.g. "circleSize"
-  label: string         // semantic label, e.g. "Circle Size"
-  semanticLabel: string // richer LLM-generated label
+  name: string
+  label: string
+  semanticLabel: string
   value: number
   min: number
   max: number
   step: number
 }
 
-// Semantic axis — a latent knob that re-prompts the model rather than tweaking a variable.
 export interface SemanticAxis {
   id: string
-  leftLabel:  string
-  rightLabel: string
+  leftLabel:   string
+  rightLabel:  string
   leftPrompt:  string
   rightPrompt: string
-  value: number  // 0..1
+  value: number
 }
 
-// Signal binding: a live wire from a source node channel to a sketch parameter.
 export interface SignalBinding {
   id:           string
   sourceNodeId: string
-  channel:      string   // 'value', 'level', 'beat', 'phase', or sketch output channel
+  channel:      string
   targetNodeId: string
   paramName:    string
 }
@@ -45,8 +66,8 @@ export interface SketchNodeData extends Record<string, unknown> {
   generationKey: number
   width?:  number
   height?: number
-  semanticAxes?:  SemanticAxis[]
-  axesBaseline?:  string
+  semanticAxes?:   SemanticAxis[]
+  axesBaseline?:   string
   axesGenerating?: boolean
 }
 
@@ -65,13 +86,16 @@ export interface OperatorNodeData extends Record<string, unknown> {
 export interface SourceNodeData extends Record<string, unknown> {
   sourceType: SourceType
   // LFO
-  rate?:      number    // Hz, 0.05–10
-  shape?:     LFOShape
-  amplitude?: number    // output scale 0–1
-  offset?:    number    // center shift 0–1
-  // Clock
-  bpm?: number          // 20–300
-  // Runtime (updated each frame)
+  rate?: number; shape?: LFOShape; amplitude?: number; offset?: number
+  // Clock / Pattern
+  bpm?: number
+  // Noise
+  freq?: number
+  // Pattern
+  steps?: number[]; length?: number
+  // Random
+  smooth?: boolean
+  // Constant / runtime scalar
   value?: number
 }
 

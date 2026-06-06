@@ -2,6 +2,7 @@ import { useRef, useEffect, memo } from 'react'
 import type { LibraryType } from '../utils/types'
 import { buildIframeSrcdoc } from '../utils/codeUtils'
 import { useStore } from '../store/store'
+import { getSignalValue } from '../store/signals'
 
 interface Props {
   code: string
@@ -29,14 +30,14 @@ const SketchPreview = memo(function SketchPreview({
     if (!nodeId) return
     let raf: number
     const tick = () => {
-      const { signalBindings, signalValues } = useStore.getState()
+      const { signalBindings } = useStore.getState()
       const bindings = signalBindings.filter((b) => b.targetNodeId === nodeId)
       if (bindings.length > 0) {
         const win = iframeRef.current?.contentWindow
         if (win) {
           for (const b of bindings) {
             win.postMessage(
-              { type: 'live-var', name: b.paramName, value: signalValues[`${b.sourceNodeId}:${b.channel}`] ?? 0 },
+              { type: 'live-var', name: b.paramName, value: getSignalValue(b.sourceNodeId, b.channel) },
               '*',
             )
           }

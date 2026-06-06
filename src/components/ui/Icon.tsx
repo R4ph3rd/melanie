@@ -6,6 +6,9 @@ import {
   Flash, InProgress, Settings, Plug, Help, View, ViewOff, Checkmark,
   StopFilled, ZoomIn, ZoomOut, Locked, Unlocked, ChevronDown,
   Waveform, Microphone, Timer,
+  Shuffle, Grid, Analytics, Activity,
+  Cursor_1 as CursorIcon, Keyboard, ArrowDown, Music, Camera, Pin,
+  ChartBar,
 } from '@carbon/icons-react'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -63,9 +66,20 @@ const ICONS: Record<string, React.ElementType<any>> = {
   'checkmark':          Checkmark,
 
   // Source nodes
-  'lfo':                Waveform,
-  'audio':              Microphone,
-  'clock':              Timer,
+  'lfo':          Waveform,
+  'audio':        Microphone,
+  'clock':        Timer,
+  'noise':        Analytics,
+  'pattern':      Grid,
+  'random':       Shuffle,
+  'audio-fft':    ChartBar,
+  'audio-beat':   Activity,
+  'mouse':        CursorIcon,
+  'keyboard':     Keyboard,
+  'scroll':       ArrowDown,
+  'midi':         Music,
+  'webcam':       Camera,
+  'constant':     Pin,
 }
 
 export type IconName = keyof typeof ICONS

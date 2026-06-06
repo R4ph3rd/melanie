@@ -19,6 +19,7 @@ import type {
   SemanticAxis,
   SignalBinding,
 } from '../utils/types'
+import { clearNodeSignals, clearAllSignals } from './signals'
 import { CONCENTRIC_CIRCLES, TORUS } from '../utils/templates'
 import { extractParameters, updateParameterInCode, applySemanticLabels } from '../utils/codeUtils'
 import { defaultProviderAndModel } from '../api/providers'
@@ -109,9 +110,7 @@ interface MelanieStore {
   resetCanvas: () => void
 
   // Signal flow
-  signalValues:        Record<string, number>    // `${nodeId}:${channel}` → value
   signalBindings:      SignalBinding[]
-  setSignalValue:      (nodeId: string, channel: string, value: number) => void
   addSignalBinding:    (binding: Omit<SignalBinding, 'id'>) => string
   removeSignalBinding: (id: string) => void
 
@@ -185,10 +184,15 @@ export const useStore = create<MelanieStore>((set, get) => ({
 
   addSourceNode: ({ sourceType, position }) => {
     const id = nanoid(8)
-    const defaults =
-      sourceType === 'lfo'   ? { rate: 0.5, shape: 'sine', amplitude: 1, offset: 0, value: 0 } :
-      sourceType === 'clock' ? { bpm: 120, value: 0 } :
-      /* audio */               { value: 0 }
+    const DEFAULTS: Partial<Record<SourceType, Partial<SourceNodeData>>> = {
+      lfo:          { rate: 0.5, shape: 'sine', amplitude: 1, offset: 0 },
+      clock:        { bpm: 120 },
+      noise:        { freq: 0.5 },
+      pattern:      { bpm: 120, length: 8, steps: Array(8).fill(0) },
+      random:       { freq: 2, smooth: true },
+      constant:     { value: 0.5 },
+    }
+    const defaults = DEFAULTS[sourceType] ?? {}
     set((s) => ({
       nodes: [...s.nodes, { id, type: 'source', position, data: { sourceType, ...defaults } } as AppNode],
     }))
@@ -292,13 +296,15 @@ export const useStore = create<MelanieStore>((set, get) => ({
       ),
     })),
 
-  deleteNode: (id) =>
+  deleteNode: (id) => {
+    clearNodeSignals(id)
     set((s) => ({
       nodes:          s.nodes.filter((n) => n.id !== id),
       edges:          s.edges.filter((e) => e.source !== id && e.target !== id),
       signalBindings: s.signalBindings.filter((b) => b.sourceNodeId !== id && b.targetNodeId !== id),
       backgroundSketchId: s.backgroundSketchId === id ? null : s.backgroundSketchId,
-    })),
+    }))
+  },
 
   getSketchNode: (id) => {
     const n = get().nodes.find((n) => n.id === id && n.type === 'sketch')
@@ -309,18 +315,17 @@ export const useStore = create<MelanieStore>((set, get) => ({
 
   getNodePosition: (id) => get().nodes.find((n) => n.id === id)?.position,
 
-  resetCanvas: () => set({
-    nodes: [], edges: [], signalBindings: [], signalValues: {},
-    activeCodeNodeId: null, mergingSourceId: null, pendingOpType: null,
-    draggingParam: null, pendingToolbarOp: null, backgroundSketchId: null,
-  }),
+  resetCanvas: () => {
+    clearAllSignals()
+    set({
+      nodes: [], edges: [], signalBindings: [],
+      activeCodeNodeId: null, mergingSourceId: null, pendingOpType: null,
+      draggingParam: null, pendingToolbarOp: null, backgroundSketchId: null,
+    })
+  },
 
   // ── Signal flow ───────────────────────────────────────────────────────────────
-  signalValues:   {},
   signalBindings: [],
-
-  setSignalValue: (nodeId, channel, value) =>
-    set((s) => ({ signalValues: { ...s.signalValues, [`${nodeId}:${channel}`]: value } })),
 
   addSignalBinding: (binding) => {
     const id = nanoid(6)
