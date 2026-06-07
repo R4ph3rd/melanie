@@ -4,8 +4,7 @@ import { nanoid } from 'nanoid'
 import Icon from '../ui/Icon'
 import type { SketchNodeData, OperatorType } from '../../utils/types'
 import { useStore } from '../../store/store'
-import { buildSketchPopupHtml } from '../../utils/codeUtils'
-import { generate } from '../../api/providers'
+import { generate, isAbortError } from '../../api/providers'
 import { buildRegionalEditMessages, getRegionalEditSystem } from '../../prompts'
 import SketchPreview from '../SketchPreview'
 import ParameterSliders from '../ParameterSliders'
@@ -91,47 +90,68 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
     store.setBackgroundSketchId(isBackground ? null : id)
   }, [id, isBackground, store])
 
-  const popupRef = useRef<Window | null>(null)
-  const handleOpenInWindow = useCallback((e: React.MouseEvent) => {
+  // ── In-canvas regional semantic edit ──────────────────────────────────────────
+  // Drag a rectangle over the preview, describe a change, and re-prompt only that
+  // region. Replaces the old same-origin popup window (and its duplicate srcdoc).
+  type Rect = { x: number; y: number; w: number; h: number }
+  const [regionMode, setRegionMode] = useState(false)
+  const [selRect,    setSelRect]    = useState<Rect | null>(null)
+  const [regionPrompt, setRegionPrompt] = useState('')
+  const [regionBusy, setRegionBusy] = useState(false)
+  const dragStart  = useRef<{ x: number; y: number } | null>(null)
+  const stageRef   = useRef<HTMLDivElement>(null)
+  const regionAbort = useRef<AbortController | null>(null)
+
+  useEffect(() => () => regionAbort.current?.abort(), [])
+
+  const exitRegionMode = useCallback(() => {
+    setRegionMode(false); setSelRect(null); setRegionPrompt(''); dragStart.current = null
+  }, [])
+
+  const localPoint = (e: React.PointerEvent) => {
+    const r = stageRef.current!.getBoundingClientRect()
+    return { x: e.clientX - r.left, y: e.clientY - r.top }
+  }
+  const onRegionDown = useCallback((e: React.PointerEvent) => {
     e.stopPropagation()
-    if (popupRef.current && !popupRef.current.closed) { popupRef.current.focus(); return }
-    const w = window.open('', `melanie-sketch-${id}`, 'width=900,height=700,toolbar=no,menubar=no')
-    if (!w) { alert('Popup blocked, please allow popups for this site.'); return }
-    popupRef.current = w
-    w.document.open()
-    w.document.write(buildSketchPopupHtml(data.code, data.library, data.title))
-    w.document.close()
-  }, [id, data.code, data.library, data.title])
+    const p = localPoint(e); dragStart.current = p
+    setSelRect({ x: p.x, y: p.y, w: 0, h: 0 })
+    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+  }, [])
+  const onRegionMove = useCallback((e: React.PointerEvent) => {
+    if (!dragStart.current) return
+    const p = localPoint(e); const s = dragStart.current
+    setSelRect({ x: Math.min(p.x, s.x), y: Math.min(p.y, s.y), w: Math.abs(p.x - s.x), h: Math.abs(p.y - s.y) })
+  }, [])
+  const onRegionUp = useCallback(() => {
+    dragStart.current = null
+    setSelRect((r) => (r && (r.w < 8 || r.h < 8) ? null : r))
+  }, [])
 
-  useEffect(() => {
-    const p = popupRef.current
-    if (!p || p.closed) return
-    p.postMessage({ type: 'code-update', code: data.code, library: data.library }, '*')
-  }, [data.code, data.library])
-
-  useEffect(() => {
-    const onMessage = async (e: MessageEvent) => {
-      if (!popupRef.current || e.source !== popupRef.current) return
-      const d = e.data
-      if (!d || typeof d !== 'object' || d.type !== 'regional-edit') return
-      const { region, prompt: regionPrompt } = d as { type: 'regional-edit'; region: { x: number; y: number; w: number; h: number; canvasW: number; canvasH: number }; prompt: string }
-      const apiKey = store.getActiveKey()
-      if (!apiKey) {
-        popupRef.current?.postMessage({ type: 'generation-error', message: 'No API key set. Add one via "Connect Models" in the top bar.' }, '*')
-        return
-      }
-      popupRef.current?.postMessage({ type: 'generation-state', generating: true }, '*')
-      try {
-        const newCode = await generate({ providerId: store.providerId, apiKey, modelId: store.modelId, system: getRegionalEditSystem(data.library), messages: buildRegionalEditMessages(data.code, regionPrompt, region, data.library), maxTokens: 4096 })
-        store.updateSketchCode(id, newCode)
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Unknown error'
-        popupRef.current?.postMessage({ type: 'generation-error', message: msg }, '*')
-      }
+  const applyRegionalEdit = useCallback(async () => {
+    if (!selRect || !regionPrompt.trim() || !stageRef.current) return
+    const apiKey = store.getActiveKey()
+    if (!apiKey) { alert('Please add an API key via "Connect Models" in the top bar.'); return }
+    const { width: canvasW, height: canvasH } = stageRef.current.getBoundingClientRect()
+    regionAbort.current?.abort()
+    const ac = new AbortController()
+    regionAbort.current = ac
+    setRegionBusy(true)
+    try {
+      const newCode = await generate({
+        providerId: store.providerId, apiKey, modelId: store.modelId,
+        system: getRegionalEditSystem(data.library),
+        messages: buildRegionalEditMessages(data.code, regionPrompt, { ...selRect, canvasW, canvasH }, data.library),
+        maxTokens: 4096, signal: ac.signal,
+      })
+      store.updateSketchCode(id, newCode)
+      exitRegionMode()
+    } catch (err) {
+      if (!isAbortError(err)) alert(`Regional edit failed: ${err instanceof Error ? err.message : 'unknown error'}`)
+    } finally {
+      if (regionAbort.current === ac) { regionAbort.current = null; setRegionBusy(false) }
     }
-    window.addEventListener('message', onMessage)
-    return () => window.removeEventListener('message', onMessage)
-  }, [id, data.code, data.library, store])
+  }, [id, selRect, regionPrompt, data.code, data.library, store, exitRegionMode])
 
   const handleToolbarOpTarget = useCallback(() => {
     const op = store.pendingToolbarOp
@@ -274,8 +294,54 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
       <div ref={previewContainerRef}
         style={{ flex: 1, minHeight: data.height ? 60 : PREVIEW_H + 10, padding: '5px 10px', overflow: 'hidden' }}>
         {data.code ? (
-          <SketchPreview code={data.code} library={data.library} isRunning={data.isRunning}
-            generationKey={data.generationKey} width={previewW} height={measuredPreviewH} nodeId={id} />
+          <div ref={stageRef} style={{ position: 'relative', width: previewW, height: measuredPreviewH }}>
+            <SketchPreview code={data.code} library={data.library} isRunning={data.isRunning}
+              generationKey={data.generationKey} width={previewW} height={measuredPreviewH} nodeId={id} />
+
+            {/* Regional-edit overlay: transparent sibling that captures the drag */}
+            {regionMode && (
+              <div className="nodrag nopan"
+                onPointerDown={onRegionDown} onPointerMove={onRegionMove} onPointerUp={onRegionUp}
+                onClick={(e) => e.stopPropagation()}
+                style={{ position: 'absolute', inset: 0, cursor: 'crosshair', background: 'rgba(140,73,223,0.04)', borderRadius: 2 }}>
+                {selRect && (
+                  <div style={{ position: 'absolute', left: selRect.x, top: selRect.y, width: selRect.w, height: selRect.h, border: '1.5px dashed #8C49DF', background: 'rgba(140,73,223,0.12)', pointerEvents: 'none' }} />
+                )}
+                {!selRect && !regionBusy && (
+                  <div style={{ position: 'absolute', top: 6, left: 6, fontSize: 10, color: '#c084fc', background: 'rgba(0,0,0,0.6)', padding: '2px 8px', borderRadius: 999, pointerEvents: 'none' }}>
+                    Drag to select a region
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Prompt panel once a region is drawn */}
+            {regionMode && selRect && !dragStart.current && (
+              <div className="nodrag nopan" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}
+                style={{ position: 'absolute', left: 6, right: 6, bottom: 6, background: '#15101e', border: '1px solid #8C49DF', borderRadius: 4, padding: 6, boxShadow: '0 4px 16px rgba(0,0,0,0.6)' }}>
+                <input autoFocus value={regionPrompt}
+                  onChange={(e) => setRegionPrompt(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') applyRegionalEdit(); if (e.key === 'Escape') exitRegionMode() }}
+                  placeholder="Change just this region…"
+                  className="nodrag"
+                  style={{ width: '100%', background: '#0c0c0c', border: '1px solid #2a2a3a', borderRadius: 3, color: '#f0f0f0', fontSize: 11, padding: '4px 6px', outline: 'none', marginBottom: 6 }}
+                />
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6 }}>
+                  <button onClick={exitRegionMode} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 3, border: '1px solid #2a2a3a', background: 'transparent', color: '#888', cursor: 'pointer' }}>Cancel</button>
+                  <button onClick={applyRegionalEdit} disabled={!regionPrompt.trim() || regionBusy}
+                    style={{ fontSize: 11, padding: '2px 10px', borderRadius: 3, border: '1px solid #8C49DF', background: '#8C49DF', color: '#fff', cursor: 'pointer', opacity: !regionPrompt.trim() || regionBusy ? 0.5 : 1 }}>
+                    {regionBusy ? 'Editing…' : 'Apply edit'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {regionBusy && (
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(8,8,16,0.6)', color: '#c084fc', fontSize: 11, borderRadius: 2 }}>
+                <Icon name="loading" size={12} className="animate-spin" /> <span style={{ marginLeft: 6 }}>Re-generating region…</span>
+              </div>
+            )}
+          </div>
         ) : (
           <div className="flex items-center justify-center text-text-muted text-sm"
             style={{ width: previewW, height: measuredPreviewH, background: '#0a0a0a', borderRadius: 2 }}>
@@ -300,8 +366,11 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
           title={isBackground ? 'Stop drawing behind canvas' : 'Draw behind canvas'} className="nodrag">
           <Icon name="display-background" size={11} />
         </CtrlButton>
-        <CtrlButton onClick={handleOpenInWindow} title="Open in new window" className="nodrag">
-          <Icon name="open-new-tab" size={11} />
+        <CtrlButton active={regionMode}
+          onClick={() => (regionMode ? exitRegionMode() : setRegionMode(true))}
+          title="Regional edit — drag a box on the sketch, then describe the change" className="nodrag"
+          disabled={!data.code}>
+          <Icon name="modify" size={11} />
         </CtrlButton>
         <CtrlButton onClick={handleMaximize} title="Zoom to fit" className="nodrag" extraStyle={{ marginLeft: 'auto' }}>
           <Icon name="zoom-to-fit" size={11} />
