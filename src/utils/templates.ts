@@ -312,6 +312,48 @@ function draw() {
     code: TORUS,
   },
   {
+    id: 'feedback-trail',
+    title: 'Echo Trail',
+    description: 'Lissajous brush with persistence — connect through a Feedback node back to this sketch to enable the trail effect',
+    library: 'p5js',
+    semanticLabels: {
+      trailDecay: 'How long trails persist (0–1)',
+      hueSpeed:   'Color cycling speed',
+      brushSize:  'Brush radius',
+    },
+    code: `let trailDecay = 0.93;
+let hueSpeed = 1.5;
+let brushSize = 16;
+let _h = 0;
+
+function setup() {
+  createCanvas(460, 400);
+  colorMode(HSB, 360, 100, 100, 100);
+  background(0, 0, 5);
+}
+
+function draw() {
+  if (window.feedbackFrame) {
+    drawingContext.globalAlpha = trailDecay;
+    drawingContext.drawImage(window.feedbackFrame, 0, 0, width, height);
+    drawingContext.globalAlpha = 1;
+    fill(0, 0, 4, 10);
+    noStroke();
+    rect(0, 0, width, height);
+  } else {
+    background(0, 0, 5);
+  }
+
+  let t = frameCount * 0.025;
+  let cx = width / 2 + cos(t * 3.1) * 160;
+  let cy = height / 2 + sin(t * 2.0) * 140;
+  _h = (_h + hueSpeed) % 360;
+  noStroke();
+  fill(_h, 85, 100, 85);
+  circle(cx, cy, brushSize * 2);
+}`,
+  },
+  {
     id: 'particles3d',
     title: '3D Particles',
     description: 'Floating particle system',
