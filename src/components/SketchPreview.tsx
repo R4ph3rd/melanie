@@ -44,7 +44,11 @@ const SketchPreview = memo(function SketchPreview({
     if (win) {
       for (const p of next) {
         const prev = prevParams.current.find((q) => q.name === p.name)
-        if (!prev || prev.value !== p.value) {
+        if (p.kind === 'color') {
+          if (!prev || prev.colorValue !== p.colorValue) {
+            win.postMessage({ type: 'live-var', name: p.name, value: p.colorValue }, '*')
+          }
+        } else if (!prev || prev.value !== p.value) {
           win.postMessage({ type: 'live-var', name: p.name, value: p.value }, '*')
         }
       }

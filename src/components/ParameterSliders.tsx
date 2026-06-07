@@ -10,8 +10,14 @@ const S = {
   unbindBtn: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 14, height: 14, borderRadius: 2, background: 'transparent', border: 'none', color: '#0ea5e9', cursor: 'pointer', fontSize: 12, padding: 0, flexShrink: 0 } as React.CSSProperties,
 }
 
+// <input type="color"> needs 6-digit hex; expand #abc → #aabbcc.
+function expandHex(h: string): string {
+  return `#${h.slice(1).split('').map((c) => c + c).join('')}`
+}
+
 const ParameterSliders = memo(function ParameterSliders({ nodeId, params }: Props) {
   const patchParam      = useStore((s) => s.patchSketchParameter)
+  const patchColor      = useStore((s) => s.patchSketchColor)
   const getNode         = useStore((s) => s.getSketchNode)
   const draggingParam   = useStore((s) => s.draggingParam)
   const setDragging     = useStore((s) => s.setDraggingParam)
@@ -71,6 +77,22 @@ const ParameterSliders = memo(function ParameterSliders({ nodeId, params }: Prop
     <div className="nodrag nopan px-3 pb-2 space-y-1.5 border-t border-border mt-1 pt-2"
       onPointerDown={(e) => e.stopPropagation()}>
       {params.map((p) => {
+        if (p.kind === 'color') {
+          const hex = p.colorValue ?? '#000000'
+          return (
+            <div key={p.name} className="flex items-center gap-2">
+              <span className="text-2xs font-mono truncate text-left" style={{ minWidth: 80, maxWidth: 80, color: '#666', padding: '1px 3px' }} title={p.semanticLabel || p.label}>
+                {p.semanticLabel || p.label}
+              </span>
+              <input type="color" value={hex.length === 4 ? expandHex(hex) : hex}
+                onChange={(e) => patchColor(nodeId, p.name, e.target.value)}
+                onPointerDown={(e) => e.stopPropagation()}
+                className="nodrag nopan" style={{ flex: 1, minWidth: 0, height: 18, padding: 0, background: 'transparent', border: 'none', cursor: 'pointer' }}
+              />
+              <span className="text-2xs font-mono" style={{ width: 56, textAlign: 'right', color: '#888' }}>{hex}</span>
+            </div>
+          )
+        }
         const pickingUp    = isPickingUp(p.name)
         const displayValue = p.step < 1 ? p.value.toFixed(2) : Math.round(p.value).toString()
         const binding      = bindingFor(p.name)

@@ -36,6 +36,8 @@ export interface Parameter {
   min: number
   max: number
   step: number
+  kind?: 'number' | 'color'   // default 'number'
+  colorValue?: string          // hex string when kind === 'color'
 }
 
 export interface SemanticAxis {

@@ -5,6 +5,18 @@ import type { Parameter, LibraryType } from './types'
 export function extractParameters(code: string): Parameter[] {
   const params: Parameter[] = []
   const seen = new Set<string>()
+
+  // Color literals: top-level `let/var/const name = '#rgb'|'#rrggbb'` → swatch control.
+  const colorRe = /^(?:let|var|const)\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*['"](#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}))['"]\s*;/gm
+  let cm: RegExpExecArray | null
+  while ((cm = colorRe.exec(code)) !== null) {
+    const name = cm[1]
+    if (seen.has(name)) continue
+    seen.add(name)
+    const label = smartLabel(name)
+    params.push({ name, label, semanticLabel: label, value: 0, min: 0, max: 0, step: 0, kind: 'color', colorValue: cm[2] })
+  }
+
   const re = /^(?:let|var|const)\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*([-\d.]+)\s*;/gm
   let m: RegExpExecArray | null
   while ((m = re.exec(code)) !== null) {
@@ -36,6 +48,7 @@ export function extractParameters(code: string): Parameter[] {
       min:  isInt ? Math.round(min)  : +min.toFixed(2),
       max:  isInt ? Math.round(max)  : +max.toFixed(2),
       step,
+      kind: 'number',
     })
   }
   return params
@@ -86,6 +99,9 @@ export function applySemanticLabels(
 
 // ─── Code manipulation ────────────────────────────────────────────────────────
 
+// Rewrite a numeric parameter's declaration value. Anchored to the declaration
+// line (start-of-line + let/var/const + name), so identical numbers elsewhere —
+// in comments, strings, or expressions — are never touched.
 export function updateParameterInCode(code: string, name: string, value: number): string {
   const re = new RegExp(
     `((?:^|(?<=\\n))(?:let|var|const)\\s+${escapeRegex(name)}\\s*=\\s*)[-\\d.]+`,
@@ -94,18 +110,29 @@ export function updateParameterInCode(code: string, name: string, value: number)
   return code.replace(re, `$1${value}`)
 }
 
+// Rewrite a color parameter's hex literal, preserving the original quote style.
+export function updateColorParameterInCode(code: string, name: string, hex: string): string {
+  const re = new RegExp(
+    `((?:^|(?<=\\n))(?:let|var|const)\\s+${escapeRegex(name)}\\s*=\\s*)(['"])#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})\\2`,
+    'gm',
+  )
+  return code.replace(re, `$1$2${hex}$2`)
+}
+
 function escapeRegex(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
 // ─── iframe srcdoc builder ────────────────────────────────────────────────────
 
-// Promote let/const param declarations to var so they're window-accessible for live-var updates.
+// Promote let/const param declarations to var so they're window-accessible for
+// live-var updates. Matches the declaration head only (name =), so it works for
+// both numeric and color (string) parameters.
 function promoteParamVars(code: string, params: Parameter[]): string {
   let out = code
   for (const p of params) {
     out = out.replace(
-      new RegExp(`(?:let|const)(\\s+${escapeRegex(p.name)}\\s*=\\s*[-\\d.]+\\s*;)`, 'gm'),
+      new RegExp(`\\b(?:let|const)(\\s+${escapeRegex(p.name)}\\s*=)`, 'm'),
       'var$1',
     )
   }

@@ -21,7 +21,7 @@ import type {
 } from '../utils/types'
 import { clearNodeSignals, clearAllSignals } from './signals'
 import { CONCENTRIC_CIRCLES, TORUS } from '../utils/templates'
-import { extractParameters, updateParameterInCode, applySemanticLabels } from '../utils/codeUtils'
+import { extractParameters, updateParameterInCode, updateColorParameterInCode, applySemanticLabels } from '../utils/codeUtils'
 import { defaultProviderAndModel } from '../api/providers'
 
 const STORAGE_KEYS     = 'melanie_api_keys'
@@ -132,6 +132,7 @@ interface MelanieStore {
   updateSketchCode:       (id: string, code: string) => void
   updateSketchParameters: (id: string, params: Parameter[]) => void
   patchSketchParameter:   (id: string, name: string, value: number) => void
+  patchSketchColor:       (id: string, name: string, hex: string) => void
   updateSketchTitle:      (id: string, title: string) => void
   updateSketchRunning:    (id: string, running: boolean) => void
   updateSketchDims:       (id: string, width: number, height: number) => void
@@ -282,6 +283,16 @@ export const useStore = create<MelanieStore>((set, get) => ({
         if (n.id !== id || n.type !== 'sketch') return n
         const newCode   = updateParameterInCode(n.data.code as string, name, value)
         const newParams = (n.data.parameters as Parameter[]).map((p) => p.name === name ? { ...p, value } : p)
+        return { ...n, data: { ...n.data, code: newCode, parameters: newParams } }
+      }),
+    })),
+
+  patchSketchColor: (id, name, hex) =>
+    set((s) => ({
+      nodes: s.nodes.map((n) => {
+        if (n.id !== id || n.type !== 'sketch') return n
+        const newCode   = updateColorParameterInCode(n.data.code as string, name, hex)
+        const newParams = (n.data.parameters as Parameter[]).map((p) => p.name === name ? { ...p, colorValue: hex } : p)
         return { ...n, data: { ...n.data, code: newCode, parameters: newParams } }
       }),
     })),
