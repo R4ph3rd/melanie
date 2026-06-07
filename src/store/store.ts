@@ -129,6 +129,7 @@ interface MelanieStore {
   }) => string
   addOperatorNode: (opts: { operatorType: OperatorType; sourceNodeIds: string[]; position: { x: number; y: number } }) => string
   addSourceNode:   (opts: { sourceType: SourceType; position: { x: number; y: number } }) => string
+  addFeedbackNode: (opts: { position: { x: number; y: number } }) => string
   addEdge: (edge: AppEdge) => void
 
   updateSketchCode:       (id: string, code: string) => void
@@ -251,6 +252,12 @@ export const useStore = create<MelanieStore>((set, get) => ({
     set((s) => ({
       nodes: [...s.nodes, { id, type: 'source', position, data: { sourceType, ...defaults } } as AppNode],
     }))
+    return id
+  },
+
+  addFeedbackNode: ({ position }) => {
+    const id = nanoid(8)
+    set((s) => ({ nodes: [...s.nodes, { id, type: 'feedback', position, data: {} } as AppNode] }))
     return id
   },
 

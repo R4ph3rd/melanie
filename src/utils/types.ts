@@ -86,6 +86,12 @@ export interface OperatorNodeData extends Record<string, unknown> {
   live?: boolean   // opt-in: re-run automatically when a source sketch changes
 }
 
+export interface FeedbackNodeData extends Record<string, unknown> {
+  // Captures the upstream sketch canvas and forwards frames to the downstream
+  // sketch as window.feedbackFrame (an ImageBitmap). No data of its own yet.
+  label?: string
+}
+
 export interface SourceNodeData extends Record<string, unknown> {
   sourceType: SourceType
   // LFO
@@ -105,9 +111,10 @@ export interface SourceNodeData extends Record<string, unknown> {
 export type SketchNode   = Node<SketchNodeData, 'sketch'>
 export type OperatorNode = Node<OperatorNodeData, 'operator'>
 export type SourceNode   = Node<SourceNodeData, 'source'>
-export type AppNode      = SketchNode | OperatorNode | SourceNode
+export type FeedbackNode = Node<FeedbackNodeData, 'feedback'>
+export type AppNode      = SketchNode | OperatorNode | SourceNode | FeedbackNode
 
-export type AppEdgeKind = 'normal' | 'param-transfer' | 'signal'
+export type AppEdgeKind = 'normal' | 'param-transfer' | 'signal' | 'feedback'
 export type AppEdge     = Edge & { data?: { kind?: AppEdgeKind; bindingId?: string; inert?: boolean } }
 
 export interface ExampleSketch {

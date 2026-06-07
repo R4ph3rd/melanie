@@ -11,9 +11,11 @@ import { useStore } from '../store/store'
 import SketchNode from './nodes/SketchNode'
 import OperatorNode from './nodes/OperatorNode'
 import SourceNode from './nodes/SourceNode'
+import FeedbackNode from './nodes/FeedbackNode'
 import OpsToolbar from './OpsToolbar'
 import SketchPreview from './SketchPreview'
 import ContactSheet from './ContactSheet'
+import FeedbackBridge from './FeedbackBridge'
 import { EXAMPLE_DRAG_MIME } from './ExamplesPanel'
 import { EXAMPLE_SKETCHES } from '../utils/templates'
 import type { OperatorType, SourceType } from '../utils/types'
@@ -22,7 +24,7 @@ import type { OperatorType, SourceType } from '../utils/types'
 
 interface OpMenuEntry { type: OperatorType; label: string; icon: string; color: string }
 
-const nodeTypes: NodeTypes = { sketch: SketchNode, operator: OperatorNode, source: SourceNode }
+const nodeTypes: NodeTypes = { sketch: SketchNode, operator: OperatorNode, source: SourceNode, feedback: FeedbackNode }
 
 const CONN_OPS: OpMenuEntry[] = [
   { type: 'modify',    label: 'Modify',  icon: 'modify',    color: '#8C49DF' },
@@ -181,6 +183,12 @@ export default function Canvas() {
         setSignalConnectMenu({ screenX: lastPtr.current.x, screenY: lastPtr.current.y, sourceNodeId: connection.source, channel: connection.sourceHandle ?? 'value', targetNodeId: connection.target })
         return
       }
+      // Feedback edges are an intentional cycle (sketch → feedback → sketch); tag
+      // them so cycle detection skips them and they render as a live loop.
+      if (srcNode?.type === 'feedback' || tgtNode?.type === 'feedback') {
+        store.addEdge({ id: nanoid(6), ...connection, data: { kind: 'feedback' } })
+        return
+      }
       store.addEdge({ id: nanoid(6), ...connection })
     },
     [nodes, store],
@@ -248,6 +256,12 @@ export default function Canvas() {
       if (kind === 'signal') return {
         ...e,
         style: { stroke: '#0ea5e9', strokeWidth: 1.5, strokeDasharray: '6 3' },
+        animated: true,
+        zIndex: 1,
+      }
+      if (kind === 'feedback') return {
+        ...e,
+        style: { stroke: '#f97316', strokeWidth: 1.5, strokeDasharray: '2 3' },
         animated: true,
         zIndex: 1,
       }
@@ -364,6 +378,7 @@ export default function Canvas() {
         </FloatingMenu>
       )}
 
+      <FeedbackBridge />
       <ContactSheet />
 
       {signalConnectMenu && (() => {

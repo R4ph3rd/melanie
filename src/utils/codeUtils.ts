@@ -147,6 +147,12 @@ export function buildIframeSrcdoc(code: string, library: LibraryType, nodeId?: s
     ? `window.output=function(ch,v){parent.postMessage({type:'sketch-output',nodeId:${JSON.stringify(nodeId)},channel:ch,value:+v},'*')};`
     : 'window.output=function(){};'
 
+  // Feedback wiring: respond to capture requests with the current canvas as an
+  // ImageBitmap, and accept incoming frames as window.feedbackFrame.
+  const frameMsgs = nodeId ? `
+  if(d&&typeof d==='object'&&d.type==='request-frame'){var _c=document.querySelector('canvas');if(_c&&window.createImageBitmap){createImageBitmap(_c).then(function(b){parent.postMessage({type:'sketch-frame',nodeId:${JSON.stringify(nodeId)},bitmap:b},'*',[b])}).catch(function(){})}return}
+  if(d&&typeof d==='object'&&d.type==='feedback-frame'){if(window.feedbackFrame&&window.feedbackFrame.close)window.feedbackFrame.close();window.feedbackFrame=d.bitmap;return}` : ''
+
   if (library === 'p5js') {
     return `<!DOCTYPE html><html><head>
 <meta charset="utf-8">
@@ -159,7 +165,7 @@ window.addEventListener('message',function(e){
   var d=e.data;
   if(d==='pause'&&typeof noLoop==='function'){noLoop();return}
   if(d==='resume'&&typeof loop==='function'){loop();return}
-  if(d==='reset'){window.location.reload();return}
+  if(d==='reset'){window.location.reload();return}${frameMsgs}
   if(d&&typeof d==='object'&&d.type==='live-var'&&d.name in window)window[d.name]=d.value;
 });
 ${patchedCode}
@@ -177,7 +183,7 @@ window.addEventListener('message',function(e){
   var d=e.data;
   if(d==='pause'){_paused=true;return}
   if(d==='resume'){_paused=false;return}
-  if(d==='reset'){window.location.reload();return}
+  if(d==='reset'){window.location.reload();return}${frameMsgs}
   if(d&&typeof d==='object'&&d.type==='live-var'&&d.name in window)window[d.name]=d.value;
 });
 const _raf=window.requestAnimationFrame;

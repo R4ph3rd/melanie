@@ -3,6 +3,7 @@ import type { LibraryType, Parameter } from '../utils/types'
 import { buildIframeSrcdoc, extractParameters } from '../utils/codeUtils'
 import { useStore } from '../store/store'
 import { getSignalValue } from '../store/signals'
+import { registerIframe, unregisterIframe } from '../store/iframeRegistry'
 
 interface Props {
   code: string
@@ -35,6 +36,14 @@ const SketchPreview = memo(function SketchPreview({
   useEffect(() => {
     iframeRef.current?.contentWindow?.postMessage(isRunning ? 'resume' : 'pause', '*')
   }, [isRunning])
+
+  // Register this preview's window so the feedback bridge can route frames to it.
+  useEffect(() => {
+    if (!nodeId) return
+    const win = iframeRef.current?.contentWindow
+    if (win) registerIframe(nodeId, win)
+    return () => unregisterIframe(nodeId)
+  }, [nodeId, generationKey])
 
   // Live parameter patching: when code changes without a remount, diff the params
   // and push only the changed values as live-vars (no iframe reload).

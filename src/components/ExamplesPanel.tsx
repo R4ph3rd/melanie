@@ -208,6 +208,10 @@ export default function ExamplesPanel() {
               onClick={() => store.addSourceNode({ sourceType, position: { x: 200, y: 200 } })} />
           ))}
         </div>
+
+        <p style={{ fontSize: 10, color: '#444', margin: '10px 0 6px', fontWeight: 500 }}>Feedback</p>
+        <NewNodeButton label="Feedback loop" color="#f97316" icon="feedback"
+          onClick={() => store.addFeedbackNode({ position: { x: 200, y: 200 } })} />
       </div>
     </div>
   )
