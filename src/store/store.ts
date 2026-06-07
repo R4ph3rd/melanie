@@ -32,6 +32,27 @@ function loadKeys(): Record<string, string> {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEYS) ?? '{}') } catch { return {} }
 }
 
+// True if adding source→target would create a directed cycle (target can already reach source).
+function createsCycle(edges: AppEdge[], source: string, target: string): boolean {
+  if (source === target) return true
+  const adj = new Map<string, string[]>()
+  for (const e of edges) {
+    if (e.data?.kind && e.data.kind !== 'normal') continue
+    if (!e.source || !e.target) continue
+    ;(adj.get(e.source) ?? adj.set(e.source, []).get(e.source)!).push(e.target)
+  }
+  const seen = new Set<string>()
+  const stack = [target]
+  while (stack.length) {
+    const node = stack.pop()!
+    if (node === source) return true
+    if (seen.has(node)) continue
+    seen.add(node)
+    for (const next of adj.get(node) ?? []) stack.push(next)
+  }
+  return false
+}
+
 const { providerId: DEFAULT_PROVIDER, modelId: DEFAULT_MODEL } = defaultProviderAndModel()
 
 const rootCode   = CONCENTRIC_CIRCLES
@@ -199,7 +220,17 @@ export const useStore = create<MelanieStore>((set, get) => ({
     return id
   },
 
-  addEdge: (edge) => set((s) => ({ edges: [...s.edges, edge] })),
+  addEdge: (edge) => set((s) => {
+    // Reject data-flow edges that would close a cycle — they'd cause cascade
+    // re-runs to ping-pong forever and silently burn the user's API budget.
+    // Signal/param-transfer edges are display-only and never cascade, so allow them.
+    const isDataEdge = !edge.data?.kind || edge.data.kind === 'normal'
+    if (isDataEdge && edge.source && edge.target && createsCycle(s.edges, edge.source, edge.target)) {
+      console.warn(`Edge ${edge.source}→${edge.target} skipped: would create a cycle`)
+      return s
+    }
+    return { edges: [...s.edges, edge] }
+  }),
 
   updateSketchCode: (id, code) =>
     set((s) => ({

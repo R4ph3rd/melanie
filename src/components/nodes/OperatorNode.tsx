@@ -3,7 +3,7 @@ import { Handle, Position, NodeResizer, type NodeProps, type Node } from '@xyflo
 import type { OperatorNodeData, OperatorType } from '../../utils/types'
 import Icon from '../ui/Icon'
 import { useStore } from '../../store/store'
-import { generate, generateText } from '../../api/providers'
+import { generate, generateText, isAbortError } from '../../api/providers'
 import {
   getSystemForOperator,
   buildModifyMessages,
@@ -54,6 +54,7 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
   const prevSrc1Code      = useRef<string | null>(null)
   const prevSrc2Code      = useRef<string | null>(null)
   const handleGenerateRef = useRef<(promptOverride?: string) => Promise<void>>()
+  const abortRef          = useRef<AbortController | null>(null)
 
   const isDiff      = data.operatorType === 'diff'
   const isMerge     = data.operatorType === 'merge'
@@ -90,6 +91,12 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
     const activePrompt = promptOverride ?? prompt
     const apiKey = store.getActiveKey()
     if (!apiKey) { alert('Please add an API key via "Connect Models" in the top bar.'); return }
+    // Abort any in-flight generation so rapid re-triggers don't double-bill or
+    // race to a stale overwrite (last request wins, but we only pay for one).
+    abortRef.current?.abort()
+    const ac = new AbortController()
+    abortRef.current = ac
+    const signal = ac.signal
     store.updateOperator(id, { isGenerating: true })
     setStreamingCode('')
     setShowSuggestions(false)
@@ -101,7 +108,7 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
       if (!src1Data) throw new Error('Source sketch not found')
 
       const library   = src1Data.library
-      const genOpts   = { providerId: store.providerId, apiKey, modelId: store.modelId, maxTokens: 4096 }
+      const genOpts   = { providerId: store.providerId, apiKey, modelId: store.modelId, maxTokens: 4096, signal }
 
       if (isDiff) {
         if (!src2Data) throw new Error('Second source sketch required for diff')
@@ -137,9 +144,12 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
         enrichSemanticLabels(generatedCode, targetId)
       }
     } catch (err) {
+      if (isAbortError(err)) return   // superseded by a newer request; leave its state alone
       console.error('Generation error:', err)
       store.updateOperator(id, { isGenerating: false })
       setStreamingCode('')
+    } finally {
+      if (abortRef.current === ac) abortRef.current = null
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, data, prompt, store])
@@ -159,21 +169,26 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
 
   handleGenerateRef.current = handleGenerate
 
-  // Cascade: re-run when a source sketch's code changes (debounced).
+  // Cascade: re-run when a source sketch's code changes — but only when the
+  // operator is explicitly set "live". Off by default so editing an upstream
+  // sketch never silently re-bills downstream nodes.
   useEffect(() => {
     if (prevSrc1Code.current === null) {
       prevSrc1Code.current = src1Code; prevSrc2Code.current = src2Code; return
     }
     const changed = src1Code !== prevSrc1Code.current || src2Code !== prevSrc2Code.current
     prevSrc1Code.current = src1Code; prevSrc2Code.current = src2Code
-    if (!changed) return
+    if (!changed || !data.live) return
     const targetData = data.targetNodeId ? store.getSketchNode(data.targetNodeId) : null
     const hasOutput  = (targetData?.code?.length ?? 0) > 0 || (isDiff && !!data.diffText)
     if (!hasOutput || data.isGenerating) return
     clearTimeout(cascadeTimer.current)
     cascadeTimer.current = setTimeout(() => handleGenerateRef.current?.(), 1500)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [src1Code, src2Code])
+  }, [src1Code, src2Code, data.live])
+
+  // Cancel any in-flight request and pending cascade when the node unmounts.
+  useEffect(() => () => { abortRef.current?.abort(); clearTimeout(cascadeTimer.current) }, [])
 
   const fetchSuggestions = useCallback(async (value: string) => {
     const apiKey = store.getActiveKey()
@@ -218,6 +233,23 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           {data.isGenerating && <span style={{ fontSize: 11, color: '#606060', fontStyle: 'italic' }} className="animate-pulse">gen…</span>}
           {data.paramTransferLabel && <span style={S.paramBadge} title="Parameter transfer operation">⇄ {data.paramTransferLabel}</span>}
+          {!isDiff && (
+            <button
+              onClick={() => store.updateOperator(id, { live: !data.live })}
+              title={data.live
+                ? 'Live: re-runs automatically when a source changes (billed each time). Click to turn off.'
+                : 'Manual: only runs when you click Generate. Click to make live.'}
+              style={{
+                fontSize: 9, fontFamily: 'var(--font-mono)', fontWeight: 600, letterSpacing: '0.04em',
+                padding: '1px 5px', borderRadius: 2, cursor: 'pointer',
+                border: `1px solid ${data.live ? color : '#2a2a2a'}`,
+                background: data.live ? `${color}22` : 'transparent',
+                color: data.live ? color : '#555',
+              }}
+            >
+              {data.live ? '● LIVE' : '○ LIVE'}
+            </button>
+          )}
           <button style={S.deleteBtn} onClick={() => store.deleteNode(id)} title="Delete">
             <Icon name="delete" size={9} />
           </button>

@@ -81,6 +81,7 @@ export interface OperatorNodeData extends Record<string, unknown> {
   targetNodeId?: string
   autoGenerate?: boolean
   paramTransferLabel?: string
+  live?: boolean   // opt-in: re-run automatically when a source sketch changes
 }
 
 export interface SourceNodeData extends Record<string, unknown> {
@@ -105,7 +106,7 @@ export type SourceNode   = Node<SourceNodeData, 'source'>
 export type AppNode      = SketchNode | OperatorNode | SourceNode
 
 export type AppEdgeKind = 'normal' | 'param-transfer' | 'signal'
-export type AppEdge     = Edge & { data?: { kind?: AppEdgeKind } }
+export type AppEdge     = Edge & { data?: { kind?: AppEdgeKind; bindingId?: string; inert?: boolean } }
 
 export interface ExampleSketch {
   id: string

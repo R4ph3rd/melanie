@@ -78,18 +78,25 @@ export interface GenerateOpts {
   messages: { role: 'user' | 'assistant'; content: string }[]
   maxTokens?: number
   onStream?: (partial: string) => void
+  signal?: AbortSignal
 }
 
 export async function generate(opts: GenerateOpts): Promise<string> {
-  const { providerId, apiKey, modelId, system, messages, maxTokens = 2048, onStream } = opts
+  const { providerId, apiKey, modelId, system, messages, maxTokens = 2048, onStream, signal } = opts
   switch (providerId) {
-    case 'anthropic': return callAnthropic(apiKey, modelId, system, messages, maxTokens, onStream)
-    case 'openai':    return callOpenAICompat('https://api.openai.com/v1/chat/completions',     'OpenAI',  apiKey, modelId, system, messages, maxTokens, onStream)
-    case 'google':    return callGoogle(apiKey, modelId, system, messages, maxTokens, onStream)
-    case 'mistral':   return callOpenAICompat('https://api.mistral.ai/v1/chat/completions',     'Mistral', apiKey, modelId, system, messages, maxTokens, onStream)
-    case 'groq':      return callOpenAICompat('https://api.groq.com/openai/v1/chat/completions','Groq',   apiKey, modelId, system, messages, maxTokens, onStream)
+    case 'anthropic': return callAnthropic(apiKey, modelId, system, messages, maxTokens, onStream, signal)
+    case 'openai':    return callOpenAICompat('https://api.openai.com/v1/chat/completions',     'OpenAI',  apiKey, modelId, system, messages, maxTokens, onStream, signal)
+    case 'google':    return callGoogle(apiKey, modelId, system, messages, maxTokens, onStream, signal)
+    case 'mistral':   return callOpenAICompat('https://api.mistral.ai/v1/chat/completions',     'Mistral', apiKey, modelId, system, messages, maxTokens, onStream, signal)
+    case 'groq':      return callOpenAICompat('https://api.groq.com/openai/v1/chat/completions','Groq',   apiKey, modelId, system, messages, maxTokens, onStream, signal)
     default: throw new Error(`Unknown provider: ${providerId}`)
   }
+}
+
+// Thrown when a request is cancelled via AbortSignal; callers can swallow it silently.
+export function isAbortError(err: unknown): boolean {
+  return err instanceof DOMException && err.name === 'AbortError'
+    || (err instanceof Error && err.name === 'AbortError')
 }
 
 // ── Anthropic ─────────────────────────────────────────────────────────────────
@@ -97,12 +104,12 @@ export async function generate(opts: GenerateOpts): Promise<string> {
 async function callAnthropic(
   apiKey: string, modelId: string, system: string,
   messages: { role: 'user' | 'assistant'; content: string }[],
-  maxTokens: number, onStream?: (p: string) => void,
+  maxTokens: number, onStream?: (p: string) => void, signal?: AbortSignal,
 ): Promise<string> {
   const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true })
   if (onStream) {
     let full = ''
-    const stream = client.messages.stream({ model: modelId, max_tokens: maxTokens, system, messages })
+    const stream = client.messages.stream({ model: modelId, max_tokens: maxTokens, system, messages }, { signal })
     for await (const ev of stream) {
       if (ev.type === 'content_block_delta' && ev.delta.type === 'text_delta') {
         full += ev.delta.text
@@ -111,7 +118,7 @@ async function callAnthropic(
     }
     return extractCodeFromResponse(full)
   }
-  const resp = await client.messages.create({ model: modelId, max_tokens: maxTokens, system, messages })
+  const resp = await client.messages.create({ model: modelId, max_tokens: maxTokens, system, messages }, { signal })
   const text = resp.content[0].type === 'text' ? resp.content[0].text : ''
   return extractCodeFromResponse(text)
 }
@@ -123,7 +130,7 @@ async function callOpenAICompat(
   baseUrl: string, providerName: string,
   apiKey: string, modelId: string, system: string,
   messages: { role: 'user' | 'assistant'; content: string }[],
-  maxTokens: number, onStream?: (p: string) => void,
+  maxTokens: number, onStream?: (p: string) => void, signal?: AbortSignal,
 ): Promise<string> {
   const resp = await fetch(baseUrl, {
     method: 'POST',
@@ -132,6 +139,7 @@ async function callOpenAICompat(
       model: modelId, max_tokens: maxTokens, stream: !!onStream,
       messages: [{ role: 'system', content: system }, ...messages],
     }),
+    signal,
   })
   if (!resp.ok) throw new Error(`${providerName} error ${resp.status}: ${await resp.text()}`)
 
@@ -161,7 +169,7 @@ async function callOpenAICompat(
 async function callGoogle(
   apiKey: string, modelId: string, system: string,
   messages: { role: 'user' | 'assistant'; content: string }[],
-  maxTokens: number, onStream?: (p: string) => void,
+  maxTokens: number, onStream?: (p: string) => void, signal?: AbortSignal,
 ): Promise<string> {
   const action = onStream ? 'streamGenerateContent' : 'generateContent'
   const url    = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:${action}?key=${apiKey}&alt=sse`
@@ -176,6 +184,7 @@ async function callGoogle(
       })),
       generationConfig: { maxOutputTokens: maxTokens },
     }),
+    signal,
   })
   if (!resp.ok) throw new Error(`Google error ${resp.status}: ${await resp.text()}`)
 
