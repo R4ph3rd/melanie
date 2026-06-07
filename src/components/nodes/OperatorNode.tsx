@@ -1,5 +1,6 @@
 import { memo, useState, useEffect, useRef, useCallback } from 'react'
 import { Handle, Position, NodeResizer, type NodeProps, type Node } from '@xyflow/react'
+import { nanoid } from 'nanoid'
 import type { OperatorNodeData, OperatorType } from '../../utils/types'
 import Icon from '../ui/Icon'
 import { useStore } from '../../store/store'
@@ -203,6 +204,26 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
     } catch { /* non-fatal */ }
   }, [store, data.sourceNodeIds])
 
+  // Diff is otherwise a dead end: turn the observed difference into an actionable
+  // modify op that pushes source A along that difference.
+  const applyDiffAsModify = useCallback(() => {
+    if (!data.diffText) return
+    const srcId   = data.sourceNodeIds[0]
+    const srcData = store.getSketchNode(srcId)
+    if (!srcData) return
+    const pos   = store.getNodePosition(id)
+    const baseX = (pos?.x ?? 0)
+    const baseY = (pos?.y ?? 0)
+    const targetId = store.addSketchNode({ code: '', library: srcData.library, position: { x: baseX + 340, y: baseY + 160 }, title: store.nextSketchTitle() })
+    const opId     = store.addOperatorNode({ operatorType: 'modify', sourceNodeIds: [srcId], position: { x: baseX, y: baseY + 220 } })
+    store.updateOperator(opId, {
+      targetNodeId: targetId, autoGenerate: true,
+      prompt: `Apply this observed visual difference to the sketch, shifting it in that direction:\n\n${data.diffText}`,
+    })
+    store.addEdge({ id: nanoid(6), source: srcId, target: opId,     sourceHandle: 'right' })
+    store.addEdge({ id: nanoid(6), source: opId,  target: targetId, targetHandle: 'left'  })
+  }, [id, data.diffText, data.sourceNodeIds, store])
+
   function handlePromptChange(v: string) {
     setPrompt(v)
     store.updateOperator(id, { prompt: v })
@@ -257,7 +278,14 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
       </div>
 
       <div className="p-3 space-y-2">
-        {isDiff && data.diffText && <p className="text-xs text-text-secondary leading-relaxed">{data.diffText}</p>}
+        {isDiff && data.diffText && <>
+          <p className="text-xs text-text-secondary leading-relaxed">{data.diffText}</p>
+          <button onClick={applyDiffAsModify}
+            style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '5px 12px', border: `1px solid ${color}`, borderRadius: 2, background: 'transparent', color, fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
+            title="Create a modify op that pushes the first sketch along this difference">
+            <Icon name="modify" size={13} /> Apply as modify
+          </button>
+        </>}
         {isDiff && !data.diffText && !data.isGenerating && (
           <button onClick={() => handleGenerate()} style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '6px 12px', border: `1px solid ${color}`, borderRadius: 2, background: color, color: '#fff', fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
             <Icon name="diff" size={14} /> Compare
