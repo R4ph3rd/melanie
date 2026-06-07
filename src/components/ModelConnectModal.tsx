@@ -11,10 +11,12 @@ interface Props {
 }
 
 export default function ModelConnectModal({ onClose }: Props) {
-  const apiKeys    = useStore((s) => s.apiKeys)
-  const providerId = useStore((s) => s.providerId)
-  const modelId    = useStore((s) => s.modelId)
-  const setApiKey  = useStore((s) => s.setApiKey)
+  const apiKeys      = useStore((s) => s.apiKeys)
+  const providerId   = useStore((s) => s.providerId)
+  const modelId      = useStore((s) => s.modelId)
+  const setApiKey    = useStore((s) => s.setApiKey)
+  const rememberKeys = useStore((s) => s.rememberKeys)
+  const setRemember  = useStore((s) => s.setRememberKeys)
 
   const [drafts, setDrafts] = useState<Record<string, string>>(
     Object.fromEntries(PROVIDERS.map((p) => [p.id, apiKeys[p.id] ?? '']))
@@ -58,6 +60,22 @@ export default function ModelConnectModal({ onClose }: Props) {
             <DialogPrimitive.Description className="text-xs text-muted-foreground mt-1">
               Add API keys for the providers you want to use
             </DialogPrimitive.Description>
+          </div>
+
+          {/* Storage choice + honest security note */}
+          <div className="px-6 pb-3 flex-shrink-0">
+            <label className="flex items-start gap-2 cursor-pointer rounded border p-3"
+              style={{ borderColor: '#2a2a2a', background: '#0e0e0e' }}>
+              <input type="checkbox" checked={rememberKeys}
+                onChange={(e) => setRemember(e.target.checked)}
+                className="mt-0.5 accent-[#8C49DF]" />
+              <span className="text-xs text-muted-foreground leading-relaxed">
+                <span className="text-foreground font-medium">Remember keys on this device</span><br />
+                Keys are kept only for this tab by default. Either way they live in the
+                browser in plaintext — because this app runs LLM-authored code, any XSS
+                could read them. Use scoped keys and revoke them when you're done.
+              </span>
+            </label>
           </div>
 
           {/* Provider list scrollable */}

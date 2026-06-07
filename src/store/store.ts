@@ -25,11 +25,27 @@ import { extractParameters, updateParameterInCode, applySemanticLabels } from '.
 import { defaultProviderAndModel } from '../api/providers'
 
 const STORAGE_KEYS     = 'melanie_api_keys'
+const STORAGE_REMEMBER = 'melanie_remember_keys'
 const STORAGE_PROVIDER = 'melanie_provider'
 const STORAGE_MODEL    = 'melanie_model'
 
+// Keys live in sessionStorage by default (cleared when the tab closes). Only when
+// the user opts in to "remember" do we also persist them to localStorage. This
+// shrinks the window in which an XSS could read long-lived provider keys.
+function loadRemember(): boolean {
+  return localStorage.getItem(STORAGE_REMEMBER) === '1'
+}
+
 function loadKeys(): Record<string, string> {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEYS) ?? '{}') } catch { return {} }
+  const raw = sessionStorage.getItem(STORAGE_KEYS) ?? (loadRemember() ? localStorage.getItem(STORAGE_KEYS) : null)
+  try { return JSON.parse(raw ?? '{}') } catch { return {} }
+}
+
+function persistKeys(keys: Record<string, string>, remember: boolean) {
+  const json = JSON.stringify(keys)
+  sessionStorage.setItem(STORAGE_KEYS, json)
+  if (remember) localStorage.setItem(STORAGE_KEYS, json)
+  else localStorage.removeItem(STORAGE_KEYS)
 }
 
 // True if adding source→target would create a directed cycle (target can already reach source).
@@ -77,13 +93,15 @@ export interface DraggingParam {
 }
 
 interface MelanieStore {
-  apiKeys:    Record<string, string>
-  providerId: string
-  modelId:    string
-  setApiKey:    (providerId: string, key: string) => void
-  setProvider:  (providerId: string) => void
-  setModel:     (modelId: string) => void
-  getActiveKey: () => string
+  apiKeys:      Record<string, string>
+  rememberKeys: boolean
+  providerId:   string
+  modelId:      string
+  setApiKey:       (providerId: string, key: string) => void
+  setRememberKeys: (remember: boolean) => void
+  setProvider:     (providerId: string) => void
+  setModel:        (modelId: string) => void
+  getActiveKey:    () => string
 
   nodes: AppNode[]
   edges: AppEdge[]
@@ -141,14 +159,21 @@ interface MelanieStore {
 }
 
 export const useStore = create<MelanieStore>((set, get) => ({
-  apiKeys:    loadKeys(),
-  providerId: localStorage.getItem(STORAGE_PROVIDER) ?? DEFAULT_PROVIDER,
-  modelId:    localStorage.getItem(STORAGE_MODEL)    ?? DEFAULT_MODEL,
+  apiKeys:      loadKeys(),
+  rememberKeys: loadRemember(),
+  providerId:   localStorage.getItem(STORAGE_PROVIDER) ?? DEFAULT_PROVIDER,
+  modelId:      localStorage.getItem(STORAGE_MODEL)    ?? DEFAULT_MODEL,
 
   setApiKey: (pid, key) => {
     const next = { ...get().apiKeys, [pid]: key }
-    localStorage.setItem(STORAGE_KEYS, JSON.stringify(next))
+    persistKeys(next, get().rememberKeys)
     set({ apiKeys: next })
+  },
+
+  setRememberKeys: (remember) => {
+    localStorage.setItem(STORAGE_REMEMBER, remember ? '1' : '0')
+    persistKeys(get().apiKeys, remember)
+    set({ rememberKeys: remember })
   },
   setProvider: (pid) => { localStorage.setItem(STORAGE_PROVIDER, pid); set({ providerId: pid }) },
   setModel:    (mid) => { localStorage.setItem(STORAGE_MODEL, mid);    set({ modelId: mid }) },
