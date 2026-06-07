@@ -1,9 +1,9 @@
-import { memo, useCallback, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { nanoid } from 'nanoid'
 import Icon from './ui/Icon'
 import type { SemanticAxis } from '../utils/types'
 import { useStore } from '../store/store'
-import { generate, generateText } from '../api/providers'
+import { generate, generateText, isAbortError } from '../api/providers'
 import { getSemanticAxesSystem, buildSemanticAxesMessages, getAxisScrubSystem, buildAxisScrubMessages } from '../prompts'
 
 interface Props { nodeId: string }
@@ -17,6 +17,10 @@ const SemanticAxes = memo(function SemanticAxes({ nodeId }: Props) {
 
   const [discoverLoading, setDiscoverLoading] = useState(false)
   const scrubTimer = useRef<ReturnType<typeof setTimeout>>()
+  const scrubAbort = useRef<AbortController | null>(null)
+
+  // Cancel any in-flight scrub generation + pending debounce on unmount.
+  useEffect(() => () => { scrubAbort.current?.abort(); clearTimeout(scrubTimer.current) }, [])
 
   const discoverAxes = useCallback(async () => {
     if (!data) return
@@ -50,14 +54,20 @@ const SemanticAxes = memo(function SemanticAxes({ nodeId }: Props) {
     if (!fresh?.semanticAxes || !fresh.axesBaseline) return
     const apiKey = store.getActiveKey()
     if (!apiKey) return
+    // Abort the previous scrub before starting a new one: rapid scrubbing must
+    // not pay for overlapping requests or risk an older response landing last.
+    scrubAbort.current?.abort()
+    const ac = new AbortController()
+    scrubAbort.current = ac
     store.setAxesGenerating(nodeId, true)
     try {
-      const newCode = await generate({ providerId: store.providerId, apiKey, modelId: store.modelId, system: getAxisScrubSystem(fresh.library), messages: buildAxisScrubMessages(fresh.axesBaseline, fresh.semanticAxes, fresh.library), maxTokens: 4096 })
+      const newCode = await generate({ providerId: store.providerId, apiKey, modelId: store.modelId, system: getAxisScrubSystem(fresh.library), messages: buildAxisScrubMessages(fresh.axesBaseline, fresh.semanticAxes, fresh.library), maxTokens: 4096, signal: ac.signal })
       store.updateSketchCode(nodeId, newCode)
     } catch (err) {
+      if (isAbortError(err)) return   // superseded by a newer scrub
       console.error('Axis scrub generation error:', err)
     } finally {
-      store.setAxesGenerating(nodeId, false)
+      if (scrubAbort.current === ac) { scrubAbort.current = null; store.setAxesGenerating(nodeId, false) }
     }
   }, [nodeId, store])
 
