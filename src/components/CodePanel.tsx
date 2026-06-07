@@ -18,9 +18,8 @@ const S = {
 }
 
 export default function CodePanel({ nodeId, onClose }: Props) {
-  const data         = useStore((s) => s.getSketchNode(nodeId))
-  const updateCode   = useStore((s) => s.updateSketchCode)
-  const reloadSketch = useStore((s) => s.reloadSketch)
+  const data       = useStore((s) => s.getSketchNode(nodeId))
+  const updateCode = useStore((s) => s.updateSketchCode)
   const [localCode, setLocalCode] = useState(data?.code ?? '')
   const [dirty,     setDirty]     = useState(false)
 
@@ -34,8 +33,7 @@ export default function CodePanel({ nodeId, onClose }: Props) {
   const applyCodeRef = useRef<() => void>()
 
   function applyCode() {
-    updateCode(nodeId, localCode)
-    reloadSketch(nodeId)
+    updateCode(nodeId, localCode)   // bumps generationKey → preview remounts
     setDirty(false)
   }
 

@@ -1,6 +1,6 @@
 import { useRef, useEffect, memo } from 'react'
-import type { LibraryType } from '../utils/types'
-import { buildIframeSrcdoc } from '../utils/codeUtils'
+import type { LibraryType, Parameter } from '../utils/types'
+import { buildIframeSrcdoc, extractParameters } from '../utils/codeUtils'
 import { useStore } from '../store/store'
 import { getSignalValue } from '../store/signals'
 
@@ -18,14 +18,42 @@ const SketchPreview = memo(function SketchPreview({
   code, library, isRunning, generationKey, width = 260, height = 200, nodeId,
 }: Props) {
   const iframeRef = useRef<HTMLIFrameElement>(null)
-  const srcdoc    = buildIframeSrcdoc(code, library, nodeId)
+
+  // Freeze the srcdoc per structural version: only a generationKey bump rebuilds
+  // (and remounts) the iframe. Parameter tweaks change `code` but reuse the same
+  // running sketch — pushed in live below — so animations never restart.
+  const srcdocRef  = useRef('')
+  const versionRef = useRef<string | null>(null)
+  const prevParams = useRef<Parameter[]>([])
+  const version    = `${library}:${generationKey}`
+  if (versionRef.current !== version) {
+    versionRef.current = version
+    srcdocRef.current  = buildIframeSrcdoc(code, library, nodeId)
+    prevParams.current = extractParameters(code)
+  }
 
   useEffect(() => {
     iframeRef.current?.contentWindow?.postMessage(isRunning ? 'resume' : 'pause', '*')
   }, [isRunning])
 
-  // Forward live signal bindings to the iframe each animation frame — no React
-  // re-renders needed, we read store state directly inside the RAF loop.
+  // Live parameter patching: when code changes without a remount, diff the params
+  // and push only the changed values as live-vars (no iframe reload).
+  useEffect(() => {
+    const next = extractParameters(code)
+    const win  = iframeRef.current?.contentWindow
+    if (win) {
+      for (const p of next) {
+        const prev = prevParams.current.find((q) => q.name === p.name)
+        if (!prev || prev.value !== p.value) {
+          win.postMessage({ type: 'live-var', name: p.name, value: p.value }, '*')
+        }
+      }
+    }
+    prevParams.current = next
+  }, [code])
+
+  // Forward bound signal values to the iframe each frame — read store state
+  // directly inside the RAF loop so there are no React re-renders.
   useEffect(() => {
     if (!nodeId) return
     let raf: number
@@ -51,9 +79,9 @@ const SketchPreview = memo(function SketchPreview({
 
   return (
     <iframe
-      key={`${generationKey}-${code.length}`}
+      key={`${nodeId ?? 'preview'}-${generationKey}`}
       ref={iframeRef}
-      srcDoc={srcdoc}
+      srcDoc={srcdocRef.current}
       width={width}
       height={height}
       sandbox="allow-scripts"

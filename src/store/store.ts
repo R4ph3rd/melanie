@@ -232,11 +232,14 @@ export const useStore = create<MelanieStore>((set, get) => ({
     return { edges: [...s.edges, edge] }
   }),
 
+  // Structural code replacement (LLM output, manual edit) → bump generationKey so
+  // the preview iframe remounts. Parameter tweaks use patchSketchParameter instead,
+  // which keeps the key stable so the running sketch is patched live.
   updateSketchCode: (id, code) =>
     set((s) => ({
       nodes: s.nodes.map((n) =>
         n.id === id && n.type === 'sketch'
-          ? { ...n, data: { ...n.data, code, parameters: extractParameters(code), error: undefined } }
+          ? { ...n, data: { ...n.data, code, parameters: extractParameters(code), error: undefined, generationKey: (n.data.generationKey as number) + 1 } }
           : n
       ),
     })),
