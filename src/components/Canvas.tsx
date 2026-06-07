@@ -13,6 +13,7 @@ import OperatorNode from './nodes/OperatorNode'
 import SourceNode from './nodes/SourceNode'
 import OpsToolbar from './OpsToolbar'
 import SketchPreview from './SketchPreview'
+import ContactSheet from './ContactSheet'
 import { EXAMPLE_DRAG_MIME } from './ExamplesPanel'
 import { EXAMPLE_SKETCHES } from '../utils/templates'
 import type { OperatorType, SourceType } from '../utils/types'
@@ -362,6 +363,8 @@ export default function Canvas() {
           ))}
         </FloatingMenu>
       )}
+
+      <ContactSheet />
 
       {signalConnectMenu && (() => {
         const targetData = store.getSketchNode(signalConnectMenu.targetNodeId)

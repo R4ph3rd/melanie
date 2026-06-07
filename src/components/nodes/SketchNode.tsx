@@ -4,6 +4,8 @@ import { nanoid } from 'nanoid'
 import Icon from '../ui/Icon'
 import type { SketchNodeData, OperatorType } from '../../utils/types'
 import { useStore } from '../../store/store'
+import { buildIframeSrcdoc } from '../../utils/codeUtils'
+import { downloadFile, slugify } from '../../utils/io'
 import { generate, isAbortError } from '../../api/providers'
 import { buildRegionalEditMessages, getRegionalEditSystem } from '../../prompts'
 import SketchPreview from '../SketchPreview'
@@ -372,7 +374,14 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
           disabled={!data.code}>
           <Icon name="modify" size={11} />
         </CtrlButton>
-        <CtrlButton onClick={handleMaximize} title="Zoom to fit" className="nodrag" extraStyle={{ marginLeft: 'auto' }}>
+        <CtrlButton onClick={() => store.setCompareNodeId(id)} title="Compare with sibling variants" className="nodrag" disabled={!data.code} extraStyle={{ marginLeft: 'auto' }}>
+          <Icon name="compare" size={11} />
+        </CtrlButton>
+        <CtrlButton onClick={() => downloadFile(`${slugify(data.title)}.html`, buildIframeSrcdoc(data.code, data.library), 'text/html')}
+          title="Export as standalone HTML" className="nodrag" disabled={!data.code}>
+          <Icon name="export" size={11} />
+        </CtrlButton>
+        <CtrlButton onClick={handleMaximize} title="Zoom to fit" className="nodrag">
           <Icon name="zoom-to-fit" size={11} />
         </CtrlButton>
       </div>

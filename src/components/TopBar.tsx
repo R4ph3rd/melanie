@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import * as SelectPrimitive      from '@radix-ui/react-select'
 import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu'
 import * as PopoverPrimitive     from '@radix-ui/react-popover'
@@ -6,6 +6,7 @@ import Icon from './ui/Icon'
 import { ChevronDown, Checkmark } from '@carbon/icons-react'
 import { useStore } from '../store/store'
 import { PROVIDERS } from '../api/providers'
+import { downloadFile, readTextFile } from '../utils/io'
 import ModelConnectModal from './ModelConnectModal'
 
 const iconBtnStyle: React.CSSProperties = {
@@ -31,8 +32,23 @@ export default function TopBar() {
   const setProvider = useStore((s) => s.setProvider)
   const setModel    = useStore((s) => s.setModel)
 
+  const serializeGraph = useStore((s) => s.serializeGraph)
+  const loadGraph      = useStore((s) => s.loadGraph)
+
   const [showModal, setShowModal] = useState(false)
   const [helpOpen,  setHelpOpen]  = useState(false)
+  const fileInput = useRef<HTMLInputElement>(null)
+
+  const saveGraph = () =>
+    downloadFile(`melanie-graph-${new Date().toISOString().slice(0, 10)}.json`, serializeGraph(), 'application/json')
+
+  const openGraph = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    const ok = loadGraph(await readTextFile(file))
+    if (!ok) alert('Could not load that file — it does not look like a Melanie graph.')
+  }
 
   const unlockedProviders = PROVIDERS.filter((p) => !!apiKeys[p.id])
   const hasKey            = !!(apiKeys[providerId])
@@ -150,6 +166,19 @@ export default function TopBar() {
         >
           <Icon name="connect" size={12} />
           {hasKey ? 'Models' : 'Connect'}
+        </button>
+
+        {/* Graph persistence */}
+        <input ref={fileInput} type="file" accept="application/json,.json" onChange={openGraph} style={{ display: 'none' }} />
+        <button title="Save graph to file" style={iconBtnStyle} onClick={saveGraph}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#8C49DF'; e.currentTarget.style.color = '#8C49DF' }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#333'; e.currentTarget.style.color = '#555' }}>
+          <Icon name="save-graph" size={14} />
+        </button>
+        <button title="Open graph from file" style={iconBtnStyle} onClick={() => fileInput.current?.click()}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#8C49DF'; e.currentTarget.style.color = '#8C49DF' }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#333'; e.currentTarget.style.color = '#555' }}>
+          <Icon name="open-graph" size={14} />
         </button>
 
         {/* Options dropdown */}

@@ -114,11 +114,13 @@ interface MelanieStore {
   draggingParam:       DraggingParam | null
   pendingToolbarOp:    OperatorType | null
   backgroundSketchId:  string | null
+  compareNodeId:       string | null
   setActiveCodeNodeId:   (id: string | null) => void
   setMergingSourceId:    (id: string | null, opType?: 'merge' | 'diff') => void
   setDraggingParam:      (p: DraggingParam | null) => void
   setPendingToolbarOp:   (op: OperatorType | null) => void
   setBackgroundSketchId: (id: string | null) => void
+  setCompareNodeId:      (id: string | null) => void
 
   addSketchNode: (opts: {
     code?: string; library?: LibraryType
@@ -148,6 +150,10 @@ interface MelanieStore {
   nextSketchTitle: () => string
   getNodePosition: (id: string) => { x: number; y: number } | undefined
   resetCanvas: () => void
+
+  // Persistence
+  serializeGraph: () => string
+  loadGraph:      (json: string) => boolean
 
   // Signal flow
   signalBindings:      SignalBinding[]
@@ -196,6 +202,7 @@ export const useStore = create<MelanieStore>((set, get) => ({
   draggingParam:      null,
   pendingToolbarOp:   null,
   backgroundSketchId: null,
+  compareNodeId:      null,
 
   setActiveCodeNodeId: (id) => set({ activeCodeNodeId: id }),
   setMergingSourceId: (id, opType = 'merge') =>
@@ -203,6 +210,7 @@ export const useStore = create<MelanieStore>((set, get) => ({
   setDraggingParam:      (p)  => set({ draggingParam: p }),
   setPendingToolbarOp:   (op) => set({ pendingToolbarOp: op }),
   setBackgroundSketchId: (id) => set({ backgroundSketchId: id }),
+  setCompareNodeId:      (id) => set({ compareNodeId: id }),
 
   addSketchNode: ({ code, library = 'p5js', position = { x: 200, y: 200 }, title, sourcePrompt, semanticLabels }) => {
     const id = nanoid(8)
@@ -392,6 +400,34 @@ export const useStore = create<MelanieStore>((set, get) => ({
       activeCodeNodeId: null, mergingSourceId: null, pendingOpType: null,
       draggingParam: null, pendingToolbarOp: null, backgroundSketchId: null,
     })
+  },
+
+  // ── Persistence ─────────────────────────────────────────────────────────────────
+  serializeGraph: () => {
+    const { nodes, edges, signalBindings } = get()
+    return JSON.stringify({ version: 1, nodes, edges, signalBindings }, null, 2)
+  },
+
+  loadGraph: (json) => {
+    try {
+      const parsed = JSON.parse(json)
+      if (!Array.isArray(parsed.nodes)) throw new Error('missing nodes array')
+      // Reset transient runtime flags so a saved mid-generation graph loads clean.
+      const nodes = (parsed.nodes as AppNode[]).map((n) =>
+        n.type === 'sketch'   ? { ...n, data: { ...n.data, isRunning: true, axesGenerating: false } } :
+        n.type === 'operator' ? { ...n, data: { ...n.data, isGenerating: false } } : n
+      )
+      clearAllSignals()
+      set({
+        nodes, edges: parsed.edges ?? [], signalBindings: parsed.signalBindings ?? [],
+        activeCodeNodeId: null, mergingSourceId: null, pendingOpType: null,
+        draggingParam: null, pendingToolbarOp: null, backgroundSketchId: null,
+      })
+      return true
+    } catch (e) {
+      console.error('loadGraph failed:', e)
+      return false
+    }
   },
 
   // ── Signal flow ───────────────────────────────────────────────────────────────

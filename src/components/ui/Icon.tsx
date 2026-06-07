@@ -8,7 +8,7 @@ import {
   Waveform, Microphone, Timer,
   Shuffle, Grid, Analytics, Activity,
   Cursor_1 as CursorIcon, Keyboard, ArrowDown, Music, Camera, Pin,
-  ChartBar,
+  ChartBar, Save, DocumentImport, Download, Loop,
 } from '@carbon/icons-react'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -80,6 +80,13 @@ const ICONS: Record<string, React.ElementType<any>> = {
   'midi':         Music,
   'webcam':       Camera,
   'constant':     Pin,
+
+  // Persistence / views / feedback
+  'save-graph':   Save,
+  'open-graph':   DocumentImport,
+  'export':       Download,
+  'compare':      Grid,
+  'feedback':     Loop,
 }
 
 export type IconName = keyof typeof ICONS
