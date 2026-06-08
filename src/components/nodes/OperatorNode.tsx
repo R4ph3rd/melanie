@@ -1,9 +1,10 @@
 import { memo, useState, useEffect, useRef, useCallback } from 'react'
 import { Handle, Position, NodeResizer, type NodeProps, type Node } from '@xyflow/react'
+import { nanoid } from 'nanoid'
 import type { OperatorNodeData, OperatorType } from '../../utils/types'
 import Icon from '../ui/Icon'
 import { useStore } from '../../store/store'
-import { generate, generateText } from '../../api/providers'
+import { generate, generateText, isAbortError } from '../../api/providers'
 import {
   getSystemForOperator,
   buildModifyMessages,
@@ -54,6 +55,7 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
   const prevSrc1Code      = useRef<string | null>(null)
   const prevSrc2Code      = useRef<string | null>(null)
   const handleGenerateRef = useRef<(promptOverride?: string) => Promise<void>>()
+  const abortRef          = useRef<AbortController | null>(null)
 
   const isDiff      = data.operatorType === 'diff'
   const isMerge     = data.operatorType === 'merge'
@@ -90,6 +92,12 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
     const activePrompt = promptOverride ?? prompt
     const apiKey = store.getActiveKey()
     if (!apiKey) { alert('Please add an API key via "Connect Models" in the top bar.'); return }
+    // Abort any in-flight generation so rapid re-triggers don't double-bill or
+    // race to a stale overwrite (last request wins, but we only pay for one).
+    abortRef.current?.abort()
+    const ac = new AbortController()
+    abortRef.current = ac
+    const signal = ac.signal
     store.updateOperator(id, { isGenerating: true })
     setStreamingCode('')
     setShowSuggestions(false)
@@ -101,7 +109,7 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
       if (!src1Data) throw new Error('Source sketch not found')
 
       const library   = src1Data.library
-      const genOpts   = { providerId: store.providerId, apiKey, modelId: store.modelId, maxTokens: 4096 }
+      const genOpts   = { providerId: store.providerId, apiKey, modelId: store.modelId, maxTokens: 4096, signal }
 
       if (isDiff) {
         if (!src2Data) throw new Error('Second source sketch required for diff')
@@ -137,9 +145,12 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
         enrichSemanticLabels(generatedCode, targetId)
       }
     } catch (err) {
+      if (isAbortError(err)) return   // superseded by a newer request; leave its state alone
       console.error('Generation error:', err)
       store.updateOperator(id, { isGenerating: false })
       setStreamingCode('')
+    } finally {
+      if (abortRef.current === ac) abortRef.current = null
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, data, prompt, store])
@@ -159,21 +170,26 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
 
   handleGenerateRef.current = handleGenerate
 
-  // Cascade: re-run when a source sketch's code changes (debounced).
+  // Cascade: re-run when a source sketch's code changes — but only when the
+  // operator is explicitly set "live". Off by default so editing an upstream
+  // sketch never silently re-bills downstream nodes.
   useEffect(() => {
     if (prevSrc1Code.current === null) {
       prevSrc1Code.current = src1Code; prevSrc2Code.current = src2Code; return
     }
     const changed = src1Code !== prevSrc1Code.current || src2Code !== prevSrc2Code.current
     prevSrc1Code.current = src1Code; prevSrc2Code.current = src2Code
-    if (!changed) return
+    if (!changed || !data.live) return
     const targetData = data.targetNodeId ? store.getSketchNode(data.targetNodeId) : null
     const hasOutput  = (targetData?.code?.length ?? 0) > 0 || (isDiff && !!data.diffText)
     if (!hasOutput || data.isGenerating) return
     clearTimeout(cascadeTimer.current)
     cascadeTimer.current = setTimeout(() => handleGenerateRef.current?.(), 1500)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [src1Code, src2Code])
+  }, [src1Code, src2Code, data.live])
+
+  // Cancel any in-flight request and pending cascade when the node unmounts.
+  useEffect(() => () => { abortRef.current?.abort(); clearTimeout(cascadeTimer.current) }, [])
 
   const fetchSuggestions = useCallback(async (value: string) => {
     const apiKey = store.getActiveKey()
@@ -187,6 +203,26 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
       setShowSuggestions(true)
     } catch { /* non-fatal */ }
   }, [store, data.sourceNodeIds])
+
+  // Diff is otherwise a dead end: turn the observed difference into an actionable
+  // modify op that pushes source A along that difference.
+  const applyDiffAsModify = useCallback(() => {
+    if (!data.diffText) return
+    const srcId   = data.sourceNodeIds[0]
+    const srcData = store.getSketchNode(srcId)
+    if (!srcData) return
+    const pos   = store.getNodePosition(id)
+    const baseX = (pos?.x ?? 0)
+    const baseY = (pos?.y ?? 0)
+    const targetId = store.addSketchNode({ code: '', library: srcData.library, position: { x: baseX + 340, y: baseY + 160 }, title: store.nextSketchTitle() })
+    const opId     = store.addOperatorNode({ operatorType: 'modify', sourceNodeIds: [srcId], position: { x: baseX, y: baseY + 220 } })
+    store.updateOperator(opId, {
+      targetNodeId: targetId, autoGenerate: true,
+      prompt: `Apply this observed visual difference to the sketch, shifting it in that direction:\n\n${data.diffText}`,
+    })
+    store.addEdge({ id: nanoid(6), source: srcId, target: opId,     sourceHandle: 'right' })
+    store.addEdge({ id: nanoid(6), source: opId,  target: targetId, targetHandle: 'left'  })
+  }, [id, data.diffText, data.sourceNodeIds, store])
 
   function handlePromptChange(v: string) {
     setPrompt(v)
@@ -218,6 +254,23 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           {data.isGenerating && <span style={{ fontSize: 11, color: '#606060', fontStyle: 'italic' }} className="animate-pulse">gen…</span>}
           {data.paramTransferLabel && <span style={S.paramBadge} title="Parameter transfer operation">⇄ {data.paramTransferLabel}</span>}
+          {!isDiff && (
+            <button
+              onClick={() => store.updateOperator(id, { live: !data.live })}
+              title={data.live
+                ? 'Live: re-runs automatically when a source changes (billed each time). Click to turn off.'
+                : 'Manual: only runs when you click Generate. Click to make live.'}
+              style={{
+                fontSize: 9, fontFamily: 'var(--font-mono)', fontWeight: 600, letterSpacing: '0.04em',
+                padding: '1px 5px', borderRadius: 2, cursor: 'pointer',
+                border: `1px solid ${data.live ? color : '#2a2a2a'}`,
+                background: data.live ? `${color}22` : 'transparent',
+                color: data.live ? color : '#555',
+              }}
+            >
+              {data.live ? '● LIVE' : '○ LIVE'}
+            </button>
+          )}
           <button style={S.deleteBtn} onClick={() => store.deleteNode(id)} title="Delete">
             <Icon name="delete" size={9} />
           </button>
@@ -225,7 +278,14 @@ const OperatorNode = memo(function OperatorNode({ id, data, selected }: NodeProp
       </div>
 
       <div className="p-3 space-y-2">
-        {isDiff && data.diffText && <p className="text-xs text-text-secondary leading-relaxed">{data.diffText}</p>}
+        {isDiff && data.diffText && <>
+          <p className="text-xs text-text-secondary leading-relaxed">{data.diffText}</p>
+          <button onClick={applyDiffAsModify}
+            style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '5px 12px', border: `1px solid ${color}`, borderRadius: 2, background: 'transparent', color, fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
+            title="Create a modify op that pushes the first sketch along this difference">
+            <Icon name="modify" size={13} /> Apply as modify
+          </button>
+        </>}
         {isDiff && !data.diffText && !data.isGenerating && (
           <button onClick={() => handleGenerate()} style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '6px 12px', border: `1px solid ${color}`, borderRadius: 2, background: color, color: '#fff', fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
             <Icon name="diff" size={14} /> Compare

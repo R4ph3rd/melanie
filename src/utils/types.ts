@@ -1,28 +1,60 @@
 import type { Node, Edge } from '@xyflow/react'
 
-export type LibraryType = 'p5js' | 'threejs'
+export type LibraryType  = 'p5js' | 'threejs'
 export type OperatorType = 'modify' | 'duplicate' | 'merge' | 'diff' | 'extract'
+export type LFOShape     = 'sine' | 'square' | 'saw' | 'triangle'
+
+export type SourceType =
+  | 'lfo' | 'clock' | 'noise' | 'pattern' | 'random'
+  | 'audio' | 'audio-fft' | 'audio-beat'
+  | 'mouse' | 'keyboard' | 'scroll' | 'midi'
+  | 'webcam'
+  | 'constant'
+
+export const SOURCE_CHANNELS: Record<SourceType, string[]> = {
+  lfo:          ['value'],
+  clock:        ['phase', 'beat'],
+  noise:        ['value'],
+  pattern:      ['value', 'step'],
+  random:       ['value'],
+  audio:        ['level'],
+  'audio-fft':  ['sub', 'bass', 'mid', 'treble', 'presence'],
+  'audio-beat': ['beat', 'energy'],
+  mouse:        ['x', 'y', 'click', 'speed'],
+  keyboard:     ['held', 'press'],
+  scroll:       ['y', 'velocity'],
+  midi:         ['note', 'velocity', 'active', 'cc'],
+  webcam:       ['brightness', 'r', 'g', 'b', 'motion'],
+  constant:     ['value'],
+}
 
 export interface Parameter {
-  name: string          // code variable name, e.g. "circleSize"
-  label: string         // semantic label, e.g. "Circle Size"
-  semanticLabel: string // richer LLM-generated label, e.g. "controls how big the rings are"
+  name: string
+  label: string
+  semanticLabel: string
   value: number
   min: number
   max: number
   step: number
+  kind?: 'number' | 'color'   // default 'number'
+  colorValue?: string          // hex string when kind === 'color'
 }
 
-// Semantic axis — a Photoshop-style "latent knob" that re-prompts the model
-// rather than tweaking a variable. The LLM proposes 3-4 axes per sketch with
-// two opposing poles; scrubbing the slider interpolates between them.
 export interface SemanticAxis {
   id: string
-  leftLabel:  string   // e.g. "chaos"
-  rightLabel: string   // e.g. "order"
-  leftPrompt:  string  // one-line description of the left pole
-  rightPrompt: string  // one-line description of the right pole
-  value: number        // 0..1 (0 = full left, 0.5 = neutral, 1 = full right)
+  leftLabel:   string
+  rightLabel:  string
+  leftPrompt:  string
+  rightPrompt: string
+  value: number
+}
+
+export interface SignalBinding {
+  id:           string
+  sourceNodeId: string
+  channel:      string
+  targetNodeId: string
+  paramName:    string
 }
 
 export interface SketchNodeData extends Record<string, unknown> {
@@ -34,14 +66,11 @@ export interface SketchNodeData extends Record<string, unknown> {
   sourcePrompt?: string
   error?: string
   generationKey: number
-  // Optional persisted node dimensions (controlled by NodeResizer)
   width?:  number
   height?: number
-  // LLM-proposed latent axes (chaos/order, dense/sparse, …) — scrubbing
-  // them re-prompts the model rather than tweaking a variable.
-  semanticAxes?:  SemanticAxis[]
-  axesBaseline?:  string   // code snapshot the axes were generated against
-  axesGenerating?: boolean // true while LLM is regenerating from a scrub
+  semanticAxes?:   SemanticAxis[]
+  axesBaseline?:   string
+  axesGenerating?: boolean
 }
 
 export interface OperatorNodeData extends Record<string, unknown> {
@@ -52,17 +81,41 @@ export interface OperatorNodeData extends Record<string, unknown> {
   diffText?: string
   sourceNodeIds: string[]
   targetNodeId?: string
-  autoGenerate?: boolean   // triggers generation on mount (e.g. param-transfer)
-  paramTransferLabel?: string  // human-readable label carried for param-transfer ops
+  autoGenerate?: boolean
+  paramTransferLabel?: string
+  live?: boolean   // opt-in: re-run automatically when a source sketch changes
+}
+
+export interface FeedbackNodeData extends Record<string, unknown> {
+  // Captures the upstream sketch canvas and forwards frames to the downstream
+  // sketch as window.feedbackFrame (an ImageBitmap). No data of its own yet.
+  label?: string
+}
+
+export interface SourceNodeData extends Record<string, unknown> {
+  sourceType: SourceType
+  // LFO
+  rate?: number; shape?: LFOShape; amplitude?: number; offset?: number
+  // Clock / Pattern
+  bpm?: number
+  // Noise
+  freq?: number
+  // Pattern
+  steps?: number[]; length?: number
+  // Random
+  smooth?: boolean
+  // Constant / runtime scalar
+  value?: number
 }
 
 export type SketchNode   = Node<SketchNodeData, 'sketch'>
 export type OperatorNode = Node<OperatorNodeData, 'operator'>
-export type AppNode      = SketchNode | OperatorNode
+export type SourceNode   = Node<SourceNodeData, 'source'>
+export type FeedbackNode = Node<FeedbackNodeData, 'feedback'>
+export type AppNode      = SketchNode | OperatorNode | SourceNode | FeedbackNode
 
-// Edge kinds: 'normal' | 'param-transfer' (light dashed, background)
-export type AppEdgeKind = 'normal' | 'param-transfer'
-export type AppEdge     = Edge & { data?: { kind?: AppEdgeKind } }
+export type AppEdgeKind = 'normal' | 'param-transfer' | 'signal' | 'feedback'
+export type AppEdge     = Edge & { data?: { kind?: AppEdgeKind; bindingId?: string; inert?: boolean } }
 
 export interface ExampleSketch {
   id: string
@@ -70,8 +123,5 @@ export interface ExampleSketch {
   description: string
   code: string
   library: LibraryType
-  // Optional human-friendly labels keyed by variable name. Applied to the
-  // extracted parameters when the example is added to the canvas, so sliders
-  // show readable labels instead of technical camelCase names.
   semanticLabels?: Record<string, string>
 }

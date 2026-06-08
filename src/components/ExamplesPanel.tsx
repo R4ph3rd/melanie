@@ -3,8 +3,9 @@ import { useReactFlow } from '@xyflow/react'
 import { EXAMPLE_SKETCHES } from '../utils/templates'
 import { useStore } from '../store/store'
 import SketchPreview from './SketchPreview'
+import Icon from './ui/Icon'
 import { Badge } from './ui/badge'
-import type { LibraryType } from '../utils/types'
+import type { SourceType } from '../utils/types'
 
 const THUMB_H = 80
 
@@ -22,6 +23,47 @@ const S = {
   sketchMeta:   { padding: '5px 8px 6px' },
   sketchTitle:  { fontSize: 11, fontWeight: 600, color: '#c0c0c0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const } as React.CSSProperties,
   sketchDesc:   { fontSize: 10, color: '#505050', margin: 0, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' } as React.CSSProperties,
+}
+
+// ── Source tabs config ────────────────────────────────────────────────────────
+
+type SourceTab = 'osc' | 'audio' | 'input' | 'video' | 'util'
+
+interface SourceEntry { sourceType: SourceType; label: string; color: string }
+
+const SOURCE_TABS: { id: SourceTab; label: string }[] = [
+  { id: 'osc',   label: 'Osc'   },
+  { id: 'audio', label: 'Audio' },
+  { id: 'input', label: 'Input' },
+  { id: 'video', label: 'Video' },
+  { id: 'util',  label: 'Util'  },
+]
+
+const SOURCES_BY_TAB: Record<SourceTab, SourceEntry[]> = {
+  osc: [
+    { sourceType: 'lfo',     label: 'LFO',     color: '#0ea5e9' },
+    { sourceType: 'clock',   label: 'Clock',   color: '#f59e0b' },
+    { sourceType: 'noise',   label: 'Noise',   color: '#8b5cf6' },
+    { sourceType: 'pattern', label: 'Pattern', color: '#ec4899' },
+    { sourceType: 'random',  label: 'Random',  color: '#6366f1' },
+  ],
+  audio: [
+    { sourceType: 'audio',      label: 'Level', color: '#10b981' },
+    { sourceType: 'audio-fft',  label: 'FFT',   color: '#14b8a6' },
+    { sourceType: 'audio-beat', label: 'Beat',  color: '#f97316' },
+  ],
+  input: [
+    { sourceType: 'mouse',    label: 'Mouse',    color: '#a3e635' },
+    { sourceType: 'keyboard', label: 'Keyboard', color: '#facc15' },
+    { sourceType: 'scroll',   label: 'Scroll',   color: '#fb923c' },
+    { sourceType: 'midi',     label: 'MIDI',     color: '#e879f9' },
+  ],
+  video: [
+    { sourceType: 'webcam', label: 'Webcam', color: '#60a5fa' },
+  ],
+  util: [
+    { sourceType: 'constant', label: 'Constant', color: '#94a3b8' },
+  ],
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -42,14 +84,12 @@ function SketchThumbnail({ sketch }: { sketch: typeof EXAMPLE_SKETCHES[0] }) {
   )
 }
 
-function NewSketchButton({ library, label, color, position }: {
-  library: LibraryType; label: string; color: string; position: { x: number; y: number }
+function NewNodeButton({ label, color, icon, onClick }: {
+  label: string; color: string; icon?: string; onClick: () => void
 }) {
-  const store = useStore()
   const [hov, setHov] = useState(false)
   return (
-    <button
-      onClick={() => store.addSketchNode({ library, position })}
+    <button onClick={onClick}
       onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
       style={{
         display: 'flex', alignItems: 'center', gap: 8,
@@ -60,7 +100,9 @@ function NewSketchButton({ library, label, color, position }: {
         cursor: 'pointer', transition: 'all 0.1s',
       }}
     >
-      <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, border: `2px solid ${color}66`, borderRadius: 2, fontSize: 13, fontWeight: 700, flexShrink: 0 }}>+</span>
+      <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, border: `2px solid ${color}66`, borderRadius: 2, fontSize: 13, fontWeight: 700, flexShrink: 0 }}>
+        {icon ? <Icon name={icon} size={11} /> : '+'}
+      </span>
       {label}
     </button>
   )
@@ -74,6 +116,7 @@ export default function ExamplesPanel() {
   const store = useStore()
   const { screenToFlowPosition } = useReactFlow()
   const [search, setSearch] = useState('')
+  const [sourceTab, setSourceTab] = useState<SourceTab>('osc')
 
   const filtered = useMemo(() =>
     EXAMPLE_SKETCHES.filter((e) =>
@@ -136,10 +179,39 @@ export default function ExamplesPanel() {
 
       <div style={S.footer}>
         <p style={{ fontSize: 10, color: '#444', marginBottom: 6, fontWeight: 500 }}>New blank sketch</p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <NewSketchButton library="p5js"    label="p5.js sketch"    color="#10b981" position={{ x: 200, y: 200 }} />
-          <NewSketchButton library="threejs" label="three.js sketch" color="#3b82f6" position={{ x: 200, y: 300 }} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 10 }}>
+          <NewNodeButton label="p5.js sketch"    color="#10b981" onClick={() => store.addSketchNode({ library: 'p5js',    position: { x: 200, y: 200 } })} />
+          <NewNodeButton label="three.js sketch" color="#3b82f6" onClick={() => store.addSketchNode({ library: 'threejs', position: { x: 200, y: 300 } })} />
         </div>
+
+        <p style={{ fontSize: 10, color: '#444', marginBottom: 6, fontWeight: 500 }}>Signal sources</p>
+
+        {/* Tab bar */}
+        <div style={{ display: 'flex', gap: 2, marginBottom: 6 }}>
+          {SOURCE_TABS.map((tab) => (
+            <button key={tab.id} onClick={() => setSourceTab(tab.id)}
+              style={{
+                flex: 1, padding: '3px 0', borderRadius: 2, border: 'none', cursor: 'pointer',
+                fontSize: 10, fontFamily: 'var(--font-mono)', fontWeight: 600,
+                background: sourceTab === tab.id ? '#222' : 'transparent',
+                color: sourceTab === tab.id ? '#d0d0d0' : '#555',
+                transition: 'all 0.1s',
+              }}
+            >{tab.label}</button>
+          ))}
+        </div>
+
+        {/* Source buttons for active tab */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {SOURCES_BY_TAB[sourceTab].map(({ sourceType, label, color }) => (
+            <NewNodeButton key={sourceType} label={label} color={color} icon={sourceType}
+              onClick={() => store.addSourceNode({ sourceType, position: { x: 200, y: 200 } })} />
+          ))}
+        </div>
+
+        <p style={{ fontSize: 10, color: '#444', margin: '10px 0 6px', fontWeight: 500 }}>Feedback</p>
+        <NewNodeButton label="Feedback loop" color="#f97316" icon="feedback"
+          onClick={() => store.addFeedbackNode({ position: { x: 200, y: 200 } })} />
       </div>
     </div>
   )
