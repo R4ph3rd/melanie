@@ -17,7 +17,10 @@ type SketchNodeType = Node<SketchNodeData, 'sketch'>
 
 const PREVIEW_W = 260
 const PREVIEW_H = 200
-const SIGNAL_COLOR = '#0ea5e9'
+const SIGNAL_HANDLE: React.CSSProperties = {
+  width: 10, height: 10, borderRadius: 1, border: '1px solid #888',
+  background: '#e8e8e8',
+}
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
@@ -69,6 +72,11 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
   const { fitView } = useReactFlow()
 
   const previewW = (data.width ?? PREVIEW_W + 20) - 20
+
+  // Close the code panel when this node is deselected so it doesn't linger.
+  useEffect(() => {
+    if (!selected && store.activeCodeNodeId === id) store.setActiveCodeNodeId(null)
+  }, [selected, id, store])
 
   // ResizeObserver feeds the exact rendered preview height to SketchPreview,
   // accounting for ParameterSliders and SemanticAxes taking space below.
@@ -262,12 +270,12 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
         color={nodeAccent} handleStyle={S.resizerHandle} lineStyle={{ display: 'none' }}
         onResize={(_, p) => store.updateSketchDims(id, p.width, p.height)}
       />
-      {/* Data flow (operators) */}
-      <Handle type="target" position={Position.Left}  id="left"  style={{ ...S.rfHandle, top: '38%', background: nodeAccent }} title="data in" />
-      <Handle type="source" position={Position.Right} id="right" style={{ ...S.rfHandle, top: '38%', background: nodeAccent }} title="data out" />
-      {/* Signals (sketch → sketch): every output() channel flows downstream */}
-      <Handle type="target" position={Position.Left}  id="sig-in"  style={{ ...S.rfHandle, top: '68%', borderRadius: 5, background: SIGNAL_COLOR }} title="signals in" />
-      <Handle type="source" position={Position.Right} id="sig-out" style={{ ...S.rfHandle, top: '68%', borderRadius: 5, background: SIGNAL_COLOR }} title="signals out" />
+      {/* Operator data flow */}
+      <Handle type="target" position={Position.Left}  id="left"  style={{ ...S.rfHandle, top: '28%', background: nodeAccent }} title="data in" />
+      <Handle type="source" position={Position.Right} id="right" style={{ ...S.rfHandle, top: '28%', background: nodeAccent }} title="data out" />
+      {/* Sketch → sketch signal passthrough (output() channels) */}
+      <Handle type="target" position={Position.Left}  id="sig-in"  style={{ ...SIGNAL_HANDLE, position: 'absolute', top: '50%' }} title="signals in" />
+      <Handle type="source" position={Position.Right} id="sig-out" style={{ ...SIGNAL_HANDLE, position: 'absolute', top: '50%' }} title="signals out" />
 
       <div style={S.header}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
