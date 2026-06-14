@@ -27,8 +27,7 @@ export default function CodePanel({ nodeId, onClose }: Props) {
   const [localCode, setLocalCode] = useState(data?.code ?? '')
   const [dirty,     setDirty]     = useState(false)
 
-  // Variables flowing in from upstream sketches' output() channels — the data
-  // this sketch can read. Declare a matching top-level var to consume one.
+  // Sketch→sketch signal sources connected to this node (passthrough edges, no bindingId).
   const inputSources = useMemo(() =>
     edges
       .filter((e) => e.target === nodeId && e.data?.kind === 'signal' && !e.data.bindingId)
@@ -36,23 +35,30 @@ export default function CodePanel({ nodeId, onClose }: Props) {
       .filter((src): src is string => !!src && nodes.find((n) => n.id === src)?.type === 'sketch')
   , [edges, nodes, nodeId])
 
-  const inVars = useMemo(() => {
-    const out: { source: string; channel: string }[] = []
-    for (const src of inputSources) {
-      const code = (nodes.find((n) => n.id === src)?.data as { code?: string } | undefined)?.code ?? ''
-      const names = new Set([...extractDynamicOutputs(code), ...Object.keys(getNodeSignals(src))])
-      for (const channel of names) out.push({ source: src, channel })
-    }
-    return out
-  }, [inputSources, nodes])
+  // Per-source metadata: sketch title + which output() channels it exposes.
+  const sourceMeta = useMemo(() =>
+    inputSources.map((srcId) => {
+      const node    = nodes.find((n) => n.id === srcId)
+      const title   = (node?.data as { title?: string } | undefined)?.title ?? srcId
+      const code    = (node?.data as { code?: string } | undefined)?.code ?? ''
+      const channels = [...new Set([...extractDynamicOutputs(code), ...Object.keys(getNodeSignals(srcId))])]
+      return { srcId, title, channels }
+    })
+  , [inputSources, nodes])
+
+  // Collapse state per source (default expanded).
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
+  const toggleCollapsed = useCallback((srcId: string) => {
+    setCollapsed((c) => ({ ...c, [srcId]: !c[srcId] }))
+  }, [])
 
   // Re-render a few times a second so the displayed live values update.
   const [, force] = useState(0)
   useEffect(() => {
-    if (inVars.length === 0) return
+    if (inputSources.length === 0) return
     const t = setInterval(() => force((n) => n + 1), 150)
     return () => clearInterval(t)
-  }, [inVars.length])
+  }, [inputSources.length])
 
   useEffect(() => {
     if (data?.code !== undefined) { setLocalCode(data.code); setDirty(false) }
@@ -60,17 +66,15 @@ export default function CodePanel({ nodeId, onClose }: Props) {
 
   const handleChange = useCallback((value: string) => { setLocalCode(value); setDirty(true) }, [])
 
-  // Ref so the CodeMirror keybinding calls the latest applyCode without recreating the extension each keystroke.
   const applyCodeRef = useRef<() => void>()
 
   function applyCode() {
-    updateCode(nodeId, localCode)   // bumps generationKey → preview remounts
+    updateCode(nodeId, localCode)
     setDirty(false)
   }
 
   applyCodeRef.current = applyCode
 
-  // Insert a top-level declaration for an incoming variable so the sketch can read it.
   const consumeVar = useCallback((name: string) => {
     if (new RegExp(`(?:let|var|const)\\s+${name}\\b`).test(localCode)) return
     setLocalCode((c) => `let ${name} = 0; // ← signal in\n${c}`)
@@ -111,28 +115,57 @@ export default function CodePanel({ nodeId, onClose }: Props) {
         <span className="text-2xs text-muted-foreground">Ctrl+Enter to apply</span>
       </div>
 
-      {inVars.length > 0 && (
-        <div style={{ padding: '6px 10px', borderBottom: '1px solid #1a1a1a', background: '#0a0a0f' }}>
-          <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: '#0ea5e9', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 5 }}>
-            Signals in · click to declare
+      {/* Signal-in tray — always visible when a sketch sig-out is connected */}
+      {sourceMeta.map(({ srcId, title, channels }) => {
+        const isCollapsed = collapsed[srcId] ?? false
+        return (
+          <div key={srcId} style={{ borderBottom: '1px solid #1a1a1a', background: '#080810' }}>
+            {/* Collapsible header */}
+            <button
+              onClick={() => toggleCollapsed(srcId)}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', padding: '5px 10px',
+                background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+            >
+              <span style={{ fontSize: 9, color: '#555', lineHeight: 1, userSelect: 'none' }}>
+                {isCollapsed ? '▶' : '▼'}
+              </span>
+              <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: '#0ea5e9' }}>
+                {channels.length} dynamic variable{channels.length !== 1 ? 's' : ''} from{' '}
+              </span>
+              <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: '#7dd3fc', fontWeight: 600 }}>
+                {title}
+              </span>
+            </button>
+
+            {/* Variable pills — hidden when collapsed or no channels */}
+            {!isCollapsed && channels.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, padding: '2px 10px 8px' }}>
+                {channels.map((channel) => {
+                  const declared = new RegExp(`(?:let|var|const)\\s+${channel}\\b`).test(localCode)
+                  return (
+                    <button key={channel} onClick={() => consumeVar(channel)}
+                      title={declared ? 'already declared' : `insert "let ${channel} = 0"`}
+                      style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '2px 7px', borderRadius: 3, cursor: 'pointer',
+                        border: `1px solid ${declared ? '#0ea5e9' : '#1c3040'}`,
+                        background: declared ? 'rgba(14,165,233,0.12)' : '#0c1820' }}>
+                      <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: declared ? '#7dd3fc' : '#4a6a7a' }}>{channel}</span>
+                      <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: '#0ea5e9', fontVariantNumeric: 'tabular-nums' }}>
+                        {getSignalValue(srcId, channel).toFixed(2)}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+
+            {!isCollapsed && channels.length === 0 && (
+              <p style={{ margin: 0, padding: '0 10px 8px', fontSize: 10, fontFamily: 'var(--font-mono)', color: '#333' }}>
+                No output() calls in draw loop yet
+              </p>
+            )}
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-            {inVars.map(({ source, channel }) => {
-              const declared = new RegExp(`(?:let|var|const)\\s+${channel}\\b`).test(localCode)
-              return (
-                <button key={`${source}:${channel}`} onClick={() => consumeVar(channel)} title={declared ? 'already declared' : `insert "let ${channel} = 0"`}
-                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '2px 7px', borderRadius: 3, cursor: 'pointer',
-                    border: `1px solid ${declared ? '#0ea5e9' : '#243b4a'}`, background: declared ? 'rgba(14,165,233,0.12)' : '#0d141a' }}>
-                  <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: declared ? '#7dd3fc' : '#5f7a8a' }}>{channel}</span>
-                  <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: '#0ea5e9', fontVariantNumeric: 'tabular-nums' }}>
-                    {getSignalValue(source, channel).toFixed(2)}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      )}
+        )
+      })}
 
       <div className="flex-1 overflow-auto">
         <CodeMirror

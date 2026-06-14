@@ -50,6 +50,8 @@ function draw() {
   for (let i = 1; i <= numCircles; i++) {
     circle(cx, cy, circleSize * i);
   }
+  output('cursorX', mouseX / width);
+  output('cursorY', mouseY / height);
 }`
 
 export const TORUS = `
@@ -71,6 +73,7 @@ function animate() {
   requestAnimationFrame(animate);
   torus.rotation.x += 0.01;
   torus.rotation.y += 0.015;
+  output('rotation', (torus.rotation.y % (Math.PI * 2)) / (Math.PI * 2));
   renderer.render(scene, camera);
 }
 animate();`
@@ -128,6 +131,10 @@ function draw() {
     noStroke();
     circle(b.x, b.y, ballSize * 2);
   }
+  if (balls.length > 0) {
+    output('ballX', balls[0].x / width);
+    output('ballY', balls[0].y / height);
+  }
 }`,
   },
   {
@@ -164,6 +171,7 @@ function draw() {
     strokeWeight(2);
     point(x, y);
   }
+  output('phase', (t % TWO_PI) / TWO_PI);
   t += 0.02;
 }`,
   },
@@ -220,6 +228,11 @@ function draw() {
     }
     point(p.x, p.y);
   }
+  if (particles.length > 0) {
+    output('particleX', particles[0].x / width);
+    output('particleY', particles[0].y / height);
+  }
+  output('noiseZ', zoff % 1);
   zoff += 0.005;
 }`,
   },
@@ -264,6 +277,7 @@ function draw() {
     vertex(trail[i].x, trail[i].y);
   }
   endShape();
+  output('phase', (delta % TWO_PI) / TWO_PI);
   delta += 0.02;
 }`,
   },
@@ -302,6 +316,8 @@ function draw() {
       circle(x, y, s);
     }
   }
+  output('cursorX', mouseX / width);
+  output('cursorY', mouseY / height);
 }`,
   },
   {
@@ -351,6 +367,9 @@ function draw() {
   noStroke();
   fill(_h, 85, 100, 85);
   circle(cx, cy, brushSize * 2);
+  output('hue', _h / 360);
+  output('brushX', cx / width);
+  output('brushY', cy / height);
 }`,
   },
   {
@@ -404,6 +423,7 @@ function animate() {
   }
   geo.attributes.position.needsUpdate = true;
   pts.rotation.y += 0.003;
+  output('spin', (pts.rotation.y % (Math.PI * 2)) / (Math.PI * 2));
   renderer.render(scene, camera);
 }
 animate();`,

@@ -1,7 +1,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ReactFlow, Background, BackgroundVariant, Panel, MiniMap,
-  type NodeTypes, type Connection, type OnConnectStartParams,
+  type NodeTypes, type Connection, type OnConnectStartParams, type Edge,
   ConnectionMode, MarkerType, useReactFlow,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
@@ -136,6 +136,7 @@ export default function Canvas() {
   const draggingFromNode      = useRef<{ nodeId: string; nodeType: string; handleId: string | null } | null>(null)
   const connectionMade        = useRef(false)
   const suppressNextPaneClick = useRef(false)
+  const edgeReconnected       = useRef(false)
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     lastPtr.current = { x: e.clientX, y: e.clientY }
@@ -202,6 +203,44 @@ export default function Canvas() {
     [nodes, store],
   )
 
+  const handleReconnectStart = useCallback(() => {
+    edgeReconnected.current = false
+  }, [])
+
+  const handleReconnect = useCallback(
+    (oldEdge: Edge, newConnection: Connection) => {
+      edgeReconnected.current = true
+      if (oldEdge.data?.kind === 'signal' && oldEdge.data?.bindingId) {
+        store.removeSignalBinding(oldEdge.data.bindingId as string)
+      }
+      onEdgesChangeRaw([{ type: 'remove', id: oldEdge.id }])
+      const edgeData = oldEdge.data?.bindingId
+        ? { kind: oldEdge.data.kind }
+        : oldEdge.data
+      store.addEdge({
+        id: nanoid(6),
+        source: newConnection.source!,
+        target: newConnection.target!,
+        sourceHandle: newConnection.sourceHandle ?? undefined,
+        targetHandle: newConnection.targetHandle ?? undefined,
+        data: edgeData as Record<string, unknown> | undefined,
+      })
+    },
+    [store, onEdgesChangeRaw],
+  )
+
+  const handleReconnectEnd = useCallback(
+    (_: MouseEvent | TouchEvent, edge: Edge) => {
+      if (!edgeReconnected.current) {
+        if (edge.data?.kind === 'signal' && edge.data?.bindingId) {
+          store.removeSignalBinding(edge.data.bindingId as string)
+        }
+        onEdgesChangeRaw([{ type: 'remove', id: edge.id }])
+      }
+    },
+    [store, onEdgesChangeRaw],
+  )
+
   const applyConnOp = useCallback(
     (op: OperatorType, sourceNodeId: string, dropX: number, dropY: number) => {
       setConnOpsMenu(null)
@@ -261,23 +300,30 @@ export default function Canvas() {
   const styledEdges = useMemo(
     () => edges.map((e) => {
       const kind = e.data?.kind
-      if (kind === 'signal') return {
-        ...e,
-        style: { stroke: '#0ea5e9', strokeWidth: 1.5, strokeDasharray: '6 3' },
-        animated: true,
-        zIndex: 1,
+      if (kind === 'signal') {
+        // Sketch→sketch passthrough: white/light dashes matching the handle color.
+        // Source→param bindings keep the blue accent so they're visually distinct.
+        const isPassthrough = !e.data?.bindingId
+        return {
+          ...e,
+          style: { stroke: isPassthrough ? '#c8c8c8' : '#0ea5e9', strokeWidth: 1.5, strokeDasharray: '6 3' },
+          animated: true,
+          zIndex: 0,
+          reconnectable: true,
+        }
       }
       if (kind === 'feedback') return {
         ...e,
         style: { stroke: '#f97316', strokeWidth: 1.5, strokeDasharray: '2 3' },
         animated: true,
-        zIndex: 1,
+        zIndex: 0,
+        reconnectable: true,
       }
       if (kind === 'param-transfer') return {
         ...e,
         style: { stroke: '#555', strokeWidth: 1, strokeDasharray: '4 4', opacity: 0.5 },
         animated: false,
-        zIndex: -1,
+        zIndex: 0,
       }
       return {
         ...e,
@@ -285,6 +331,7 @@ export default function Canvas() {
         markerEnd: { type: MarkerType.ArrowClosed, color: '#4a4a6a' },
         animated: false,
         zIndex: 0,
+        reconnectable: true,
       }
     }),
     [edges],
@@ -366,6 +413,7 @@ export default function Canvas() {
         nodes={nodes} edges={styledEdges}
         onNodesChange={onNodesChange} onEdgesChange={onEdgesChange}
         onConnect={handleConnect} onConnectStart={handleConnectStart} onConnectEnd={handleConnectEnd}
+        onReconnect={handleReconnect} onReconnectStart={handleReconnectStart} onReconnectEnd={handleReconnectEnd}
         onPaneClick={() => {
           if (suppressNextPaneClick.current) return
           setConnOpsMenu(null); setMergeMenu(null)

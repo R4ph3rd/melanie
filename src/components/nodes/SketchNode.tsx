@@ -70,6 +70,15 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
   const [editingTitle, setEditingTitle] = useState(false)
   const store = useStore()
   const { fitView } = useReactFlow()
+  const appOnNodesChange = useStore((s) => s.onNodesChange)
+
+  // Select this node (and deselect all others) when the user interacts with it
+  // without it being already selected — e.g. clicking a toolbar button directly.
+  const ensureSelected = useCallback(() => {
+    if (selected) return
+    const allNodes = useStore.getState().nodes
+    appOnNodesChange(allNodes.map((n) => ({ type: 'select' as const, id: n.id, selected: n.id === id })))
+  }, [selected, id, appOnNodesChange])
 
   const previewW = (data.width ?? PREVIEW_W + 20) - 20
 
@@ -270,12 +279,12 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
         color={nodeAccent} handleStyle={S.resizerHandle} lineStyle={{ display: 'none' }}
         onResize={(_, p) => store.updateSketchDims(id, p.width, p.height)}
       />
-      {/* Operator data flow */}
-      <Handle type="target" position={Position.Left}  id="left"  style={{ ...S.rfHandle, top: '28%', background: nodeAccent }} title="data in" />
-      <Handle type="source" position={Position.Right} id="right" style={{ ...S.rfHandle, top: '28%', background: nodeAccent }} title="data out" />
+      {/* Operator data flow — grouped with signal handles at node vertical centre */}
+      <Handle type="target" position={Position.Left}  id="left"  style={{ ...S.rfHandle, top: '42%', background: nodeAccent }} title="data in" />
+      <Handle type="source" position={Position.Right} id="right" style={{ ...S.rfHandle, top: '42%', background: nodeAccent }} title="data out" />
       {/* Sketch → sketch signal passthrough (output() channels) */}
-      <Handle type="target" position={Position.Left}  id="sig-in"  style={{ ...SIGNAL_HANDLE, position: 'absolute', top: '50%' }} title="signals in" />
-      <Handle type="source" position={Position.Right} id="sig-out" style={{ ...SIGNAL_HANDLE, position: 'absolute', top: '50%' }} title="signals out" />
+      <Handle type="target" position={Position.Left}  id="sig-in"  style={{ ...SIGNAL_HANDLE, position: 'absolute', top: '52%' }} title="signals in" />
+      <Handle type="source" position={Position.Right} id="sig-out" style={{ ...SIGNAL_HANDLE, position: 'absolute', top: '52%' }} title="signals out" />
 
       <div style={S.header}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
@@ -365,7 +374,7 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
         )}
       </div>
 
-      <div style={S.controls} onClick={(e) => e.stopPropagation()}>
+      <div style={S.controls} onClick={(e) => e.stopPropagation()} onMouseDown={ensureSelected}>
         <CtrlButton onClick={() => store.updateSketchRunning(id, !data.isRunning)} title={data.isRunning ? 'Pause' : 'Play'} className="nodrag">
           <Icon name={data.isRunning ? 'pause' : 'play'} size={11} />
         </CtrlButton>
