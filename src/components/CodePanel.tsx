@@ -8,7 +8,7 @@ import Icon from './ui/Icon'
 import { useStore } from '../store/store'
 import { Badge } from './ui/badge'
 import { getSignalValue, getNodeSignals } from '../store/signals'
-import { extractOutputChannels } from '../utils/codeUtils'
+import { extractDynamicOutputs } from '../utils/codeUtils'
 
 interface Props { nodeId: string; onClose: () => void }
 
@@ -40,7 +40,7 @@ export default function CodePanel({ nodeId, onClose }: Props) {
     const out: { source: string; channel: string }[] = []
     for (const src of inputSources) {
       const code = (nodes.find((n) => n.id === src)?.data as { code?: string } | undefined)?.code ?? ''
-      const names = new Set([...extractOutputChannels(code), ...Object.keys(getNodeSignals(src))])
+      const names = new Set([...extractDynamicOutputs(code), ...Object.keys(getNodeSignals(src))])
       for (const channel of names) out.push({ source: src, channel })
     }
     return out

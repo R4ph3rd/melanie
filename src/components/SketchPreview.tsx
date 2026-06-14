@@ -1,6 +1,6 @@
 import { useRef, useEffect, memo } from 'react'
 import type { LibraryType, Parameter } from '../utils/types'
-import { buildIframeSrcdoc, extractParameters } from '../utils/codeUtils'
+import { buildIframeSrcdoc, extractParameters, extractDynamicOutputs } from '../utils/codeUtils'
 import { useStore } from '../store/store'
 import { getSignalValue, getNodeSignals } from '../store/signals'
 import { registerIframe, unregisterIframe } from '../store/iframeRegistry'
@@ -82,9 +82,17 @@ const SketchPreview = memo(function SketchPreview({
         }
         for (const e of edges) {
           if (e.target !== nodeId || e.data?.kind !== 'signal' || e.data.bindingId || !e.source) continue
-          if (nodes.find((n) => n.id === e.source)?.type !== 'sketch') continue
+          const srcNode = nodes.find((n) => n.id === e.source)
+          if (srcNode?.type !== 'sketch') continue
+          // Runtime-accumulated channels (already emitted via output() at least once)
           const sig = getNodeSignals(e.source)
           for (const name in sig) win.postMessage({ type: 'live-var', name, value: sig[name] }, '*')
+          // Static channels discovered in source code but not yet emitted: pre-declare as 0
+          // so the consuming sketch can safely reference them before the first output() fires.
+          const srcCode = (srcNode.data as { code?: string }).code ?? ''
+          for (const ch of extractDynamicOutputs(srcCode)) {
+            if (!(ch in sig)) win.postMessage({ type: 'live-var', name: ch, value: 0 }, '*')
+          }
         }
       }
       raf = requestAnimationFrame(tick)

@@ -209,6 +209,26 @@ export function extractOutputChannels(code: string): string[] {
   return out
 }
 
+// Like extractOutputChannels but ignores one-time functions (setup/preload/init).
+// The remaining output() calls are inside animation loops — genuinely dynamic.
+export function extractDynamicOutputs(code: string): string[] {
+  // Replace bodies of known setup-only functions with whitespace to preserve offsets.
+  let stripped = code
+  for (const fn of ['setup', 'preload', 'init', 'initScene']) {
+    const pattern = new RegExp(`\\bfunction\\s+${fn}\\s*\\([^)]*\\)\\s*\\{`, 'g')
+    let m: RegExpExecArray | null
+    while ((m = pattern.exec(code)) !== null) {
+      const openAt = code.indexOf('{', m.index + m[0].length - 1)
+      let depth = 1; let i = openAt + 1
+      while (i < code.length && depth > 0) {
+        if (code[i] === '{') depth++; else if (code[i] === '}') depth--; i++
+      }
+      stripped = stripped.slice(0, openAt) + ' '.repeat(i - 1 - openAt) + stripped.slice(i - 1)
+    }
+  }
+  return extractOutputChannels(stripped)
+}
+
 // ─── Code extraction ──────────────────────────────────────────────────────────
 
 export function extractCodeFromResponse(text: string): string {
