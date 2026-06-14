@@ -12,7 +12,7 @@ import SketchNode from './nodes/SketchNode'
 import OperatorNode from './nodes/OperatorNode'
 import SourceNode from './nodes/SourceNode'
 import FeedbackNode from './nodes/FeedbackNode'
-import OpsToolbar from './OpsToolbar'
+import AddNodeMenu from './AddNodeMenu'
 import SketchPreview from './SketchPreview'
 import ContactSheet from './ContactSheet'
 import FeedbackBridge from './FeedbackBridge'
@@ -130,9 +130,10 @@ export default function Canvas() {
   const [connOpsMenu,       setConnOpsMenu]       = useState<{ screenX: number; screenY: number; sourceNodeId: string } | null>(null)
   const [mergeMenu,         setMergeMenu]         = useState<{ screenX: number; screenY: number; sourceNodeId: string; targetNodeId: string } | null>(null)
   const [signalConnectMenu, setSignalConnectMenu] = useState<{ screenX: number; screenY: number; sourceNodeId: string; channel: string; targetNodeId: string } | null>(null)
+  const [addMenu,           setAddMenu]           = useState<{ x: number; y: number } | null>(null)
 
   const lastPtr               = useRef({ x: 0, y: 0 })
-  const draggingFromNode      = useRef<{ nodeId: string; nodeType: string } | null>(null)
+  const draggingFromNode      = useRef<{ nodeId: string; nodeType: string; handleId: string | null } | null>(null)
   const connectionMade        = useRef(false)
   const suppressNextPaneClick = useRef(false)
 
@@ -145,7 +146,7 @@ export default function Canvas() {
       connectionMade.current = false
       if (!params.nodeId) { draggingFromNode.current = null; return }
       const node = nodes.find((n) => n.id === params.nodeId)
-      draggingFromNode.current = node ? { nodeId: node.id, nodeType: node.type ?? '' } : null
+      draggingFromNode.current = node ? { nodeId: node.id, nodeType: node.type ?? '', handleId: params.handleId ?? null } : null
     },
     [nodes],
   )
@@ -156,7 +157,8 @@ export default function Canvas() {
       const completed = connectionMade.current
       draggingFromNode.current = null
       connectionMade.current   = false
-      if (!from || from.nodeType !== 'sketch' || completed) return
+      // Only the data-out handle offers operators; signal handles don't.
+      if (!from || from.nodeType !== 'sketch' || completed || from.handleId === 'sig-out' || from.handleId === 'sig-in') return
 
       const { clientX, clientY } = 'clientX' in event
         ? event as MouseEvent
@@ -176,6 +178,12 @@ export default function Canvas() {
       const srcNode = nodes.find((n) => n.id === connection.source)
       const tgtNode = nodes.find((n) => n.id === connection.target)
       if (srcNode?.type === 'sketch' && tgtNode?.type === 'sketch') {
+        // Sketch signal-out → signal-in: a live data passthrough of every channel
+        // the source sketch emits via output(). Drawn as a marching-dash signal edge.
+        if (connection.sourceHandle === 'sig-out' || connection.targetHandle === 'sig-in') {
+          store.addEdge({ id: `sigx-${nanoid(6)}`, ...connection, data: { kind: 'signal' } })
+          return
+        }
         setMergeMenu({ screenX: lastPtr.current.x, screenY: lastPtr.current.y, sourceNodeId: connection.source, targetNodeId: connection.target })
         return
       }
@@ -316,6 +324,19 @@ export default function Canvas() {
     return () => window.removeEventListener('resize', update)
   }, [])
 
+  // Tab opens the add-node menu at the cursor (unless typing in a field).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return
+      const t = e.target as HTMLElement | null
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.closest('.cm-editor'))) return
+      e.preventDefault()
+      setAddMenu((m) => (m ? null : { x: lastPtr.current.x, y: lastPtr.current.y }))
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   return (
     <div ref={wrapperRef} className="relative w-full h-full"
       onPointerMove={handlePointerMove} onDragOver={handleDragOver} onDrop={handleDrop}
@@ -359,7 +380,15 @@ export default function Canvas() {
         {!backgroundData && <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="#1e1e2e" />}
         <CanvasControls />
         <MiniMap style={{ background: '#0e0e16', border: '1px solid #2a2a3a' }} nodeColor={(n) => n.type === 'sketch' ? '#1a1f2e' : '#1c1428'} maskColor="rgba(8,8,8,0.7)" />
-        <OpsToolbar />
+        <Panel position="top-left" style={{ marginTop: 8, marginLeft: 8 }}>
+          <button className="nodrag" title="Add node (Tab)"
+            onClick={(e) => { const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); setAddMenu({ x: r.left, y: r.bottom + 4 }) }}
+            style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '7px 12px', background: '#111', border: '1px solid #333', borderRadius: 2, color: '#c0c0c0', fontFamily: 'var(--font-sans)', fontSize: 12, fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 20px rgba(0,0,0,0.6)' }}
+          >
+            <Icon name="add" size={13} /> Add node
+            <span style={{ marginLeft: 4, fontSize: 9, fontFamily: 'var(--font-mono)', color: '#555', border: '1px solid #333', borderRadius: 2, padding: '0 4px' }}>Tab</span>
+          </button>
+        </Panel>
       </ReactFlow>
 
       {connOpsMenu && (
@@ -378,6 +407,7 @@ export default function Canvas() {
         </FloatingMenu>
       )}
 
+      <AddNodeMenu anchor={addMenu} onClose={() => setAddMenu(null)} />
       <FeedbackBridge />
       <ContactSheet />
 
