@@ -87,7 +87,7 @@ export default function AddNodeMenu({ anchor, onClose }: Props) {
               >
                 <span style={{ width: 7, height: 7, borderRadius: 2, background: on ? dot : '#444' }} />
                 <span style={{ fontSize: 8, fontFamily: 'var(--font-mono)', color: on ? '#d0d0d0' : '#555', textTransform: 'uppercase', letterSpacing: '0.02em' }}>
-                  {CATEGORY_LABELS[c].slice(0, 4)}
+                  {CATEGORY_LABELS[c].slice(0, 3).replace('Inp', 'in')}
                 </span>
               </button>
             )

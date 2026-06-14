@@ -15,7 +15,7 @@ export const CATEGORY_LABELS: Record<NodeCategory, string> = {
   sketches:   'Sketches',
   generators: 'Generators',
   inputs:     'Inputs',
-  effects:    'Effects',
+  effects:    'Fx',
 }
 
 // Tab + node tint per category. Operators is neutral (nodes keep own colors).
