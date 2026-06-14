@@ -8,24 +8,28 @@ export type SourceType =
   | 'lfo' | 'clock' | 'noise' | 'pattern' | 'random'
   | 'audio' | 'audio-fft' | 'audio-beat'
   | 'mouse' | 'keyboard' | 'scroll' | 'midi'
-  | 'webcam'
+  | 'webcam' | 'video'
+  | 'video-threshold' | 'video-edge'
   | 'constant'
 
 export const SOURCE_CHANNELS: Record<SourceType, string[]> = {
-  lfo:          ['value'],
-  clock:        ['phase', 'beat'],
-  noise:        ['value'],
-  pattern:      ['value', 'step'],
-  random:       ['value'],
-  audio:        ['level'],
-  'audio-fft':  ['sub', 'bass', 'mid', 'treble', 'presence'],
-  'audio-beat': ['beat', 'energy'],
-  mouse:        ['x', 'y', 'click', 'speed'],
-  keyboard:     ['held', 'press'],
-  scroll:       ['y', 'velocity'],
-  midi:         ['note', 'velocity', 'active', 'cc'],
-  webcam:       ['brightness', 'r', 'g', 'b', 'motion'],
-  constant:     ['value'],
+  lfo:               ['value'],
+  clock:             ['phase', 'beat'],
+  noise:             ['value'],
+  pattern:           ['value', 'step'],
+  random:            ['value'],
+  audio:             ['level'],
+  'audio-fft':       ['sub', 'bass', 'mid', 'treble', 'presence'],
+  'audio-beat':      ['beat', 'energy'],
+  mouse:             ['x', 'y', 'click', 'speed'],
+  keyboard:          ['held', 'press'],
+  scroll:            ['y', 'velocity'],
+  midi:              ['note', 'velocity', 'active', 'cc'],
+  webcam:            ['brightness', 'r', 'g', 'b', 'motion'],
+  video:             ['brightness', 'r', 'g', 'b', 'motion'],
+  'video-threshold': ['ratio', 'level'],
+  'video-edge':      ['density'],
+  constant:          ['value'],
 }
 
 export interface Parameter {
@@ -106,6 +110,10 @@ export interface SourceNodeData extends Record<string, unknown> {
   smooth?: boolean
   // Constant / runtime scalar
   value?: number
+  // Video file source
+  src?: string; fileName?: string
+  // Video threshold/edge
+  threshold?: number
 }
 
 export type SketchNode   = Node<SketchNodeData, 'sketch'>

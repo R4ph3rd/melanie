@@ -9,6 +9,7 @@ import {
   Shuffle, Grid, Analytics, Activity,
   Cursor_1 as CursorIcon, Keyboard, ArrowDown, Music, Camera, Pin,
   ChartBar, Save, DocumentImport, Download, Loop,
+  Video, Contrast, EdgeNode, Add, Categories, ConnectionSignal,
 } from '@carbon/icons-react'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -79,6 +80,9 @@ const ICONS: Record<string, React.ElementType<any>> = {
   'scroll':       ArrowDown,
   'midi':         Music,
   'webcam':       Camera,
+  'video':            Video,
+  'video-threshold':  Contrast,
+  'video-edge':       EdgeNode,
   'constant':     Pin,
 
   // Persistence / views / feedback
@@ -87,6 +91,11 @@ const ICONS: Record<string, React.ElementType<any>> = {
   'export':       Download,
   'compare':      Grid,
   'feedback':     Loop,
+
+  // Menu
+  'add':          Add,
+  'category':     Categories,
+  'signal':       ConnectionSignal,
 }
 
 export type IconName = keyof typeof ICONS
