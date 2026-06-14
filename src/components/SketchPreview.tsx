@@ -2,7 +2,7 @@ import { useRef, useEffect, memo } from 'react'
 import type { LibraryType, Parameter } from '../utils/types'
 import { buildIframeSrcdoc, extractParameters } from '../utils/codeUtils'
 import { useStore } from '../store/store'
-import { getSignalValue } from '../store/signals'
+import { getSignalValue, getNodeSignals } from '../store/signals'
 import { registerIframe, unregisterIframe } from '../store/iframeRegistry'
 
 interface Props {
@@ -65,23 +65,26 @@ const SketchPreview = memo(function SketchPreview({
     prevParams.current = next
   }, [code])
 
-  // Forward bound signal values to the iframe each frame — read store state
-  // directly inside the RAF loop so there are no React re-renders.
+  // Forward signal values to the iframe each frame — read store state directly
+  // inside the RAF loop so there are no React re-renders. Two flavours:
+  //   1. source → param bindings (a channel drives one named parameter)
+  //   2. sketch → sketch signal edges (every output() channel becomes a global)
   useEffect(() => {
     if (!nodeId) return
     let raf: number
     const tick = () => {
-      const { signalBindings } = useStore.getState()
-      const bindings = signalBindings.filter((b) => b.targetNodeId === nodeId)
-      if (bindings.length > 0) {
-        const win = iframeRef.current?.contentWindow
-        if (win) {
-          for (const b of bindings) {
-            win.postMessage(
-              { type: 'live-var', name: b.paramName, value: getSignalValue(b.sourceNodeId, b.channel) },
-              '*',
-            )
-          }
+      const win = iframeRef.current?.contentWindow
+      if (win) {
+        const { signalBindings, edges, nodes } = useStore.getState()
+        for (const b of signalBindings) {
+          if (b.targetNodeId !== nodeId) continue
+          win.postMessage({ type: 'live-var', name: b.paramName, value: getSignalValue(b.sourceNodeId, b.channel) }, '*')
+        }
+        for (const e of edges) {
+          if (e.target !== nodeId || e.data?.kind !== 'signal' || e.data.bindingId || !e.source) continue
+          if (nodes.find((n) => n.id === e.source)?.type !== 'sketch') continue
+          const sig = getNodeSignals(e.source)
+          for (const name in sig) win.postMessage({ type: 'live-var', name, value: sig[name] }, '*')
         }
       }
       raf = requestAnimationFrame(tick)

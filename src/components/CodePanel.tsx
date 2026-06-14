@@ -7,6 +7,8 @@ import { Prec } from '@codemirror/state'
 import Icon from './ui/Icon'
 import { useStore } from '../store/store'
 import { Badge } from './ui/badge'
+import { getSignalValue, getNodeSignals } from '../store/signals'
+import { extractOutputChannels } from '../utils/codeUtils'
 
 interface Props { nodeId: string; onClose: () => void }
 
@@ -20,8 +22,37 @@ const S = {
 export default function CodePanel({ nodeId, onClose }: Props) {
   const data       = useStore((s) => s.getSketchNode(nodeId))
   const updateCode = useStore((s) => s.updateSketchCode)
+  const edges      = useStore((s) => s.edges)
+  const nodes      = useStore((s) => s.nodes)
   const [localCode, setLocalCode] = useState(data?.code ?? '')
   const [dirty,     setDirty]     = useState(false)
+
+  // Variables flowing in from upstream sketches' output() channels — the data
+  // this sketch can read. Declare a matching top-level var to consume one.
+  const inputSources = useMemo(() =>
+    edges
+      .filter((e) => e.target === nodeId && e.data?.kind === 'signal' && !e.data.bindingId)
+      .map((e) => e.source)
+      .filter((src): src is string => !!src && nodes.find((n) => n.id === src)?.type === 'sketch')
+  , [edges, nodes, nodeId])
+
+  const inVars = useMemo(() => {
+    const out: { source: string; channel: string }[] = []
+    for (const src of inputSources) {
+      const code = (nodes.find((n) => n.id === src)?.data as { code?: string } | undefined)?.code ?? ''
+      const names = new Set([...extractOutputChannels(code), ...Object.keys(getNodeSignals(src))])
+      for (const channel of names) out.push({ source: src, channel })
+    }
+    return out
+  }, [inputSources, nodes])
+
+  // Re-render a few times a second so the displayed live values update.
+  const [, force] = useState(0)
+  useEffect(() => {
+    if (inVars.length === 0) return
+    const t = setInterval(() => force((n) => n + 1), 150)
+    return () => clearInterval(t)
+  }, [inVars.length])
 
   useEffect(() => {
     if (data?.code !== undefined) { setLocalCode(data.code); setDirty(false) }
@@ -38,6 +69,13 @@ export default function CodePanel({ nodeId, onClose }: Props) {
   }
 
   applyCodeRef.current = applyCode
+
+  // Insert a top-level declaration for an incoming variable so the sketch can read it.
+  const consumeVar = useCallback((name: string) => {
+    if (new RegExp(`(?:let|var|const)\\s+${name}\\b`).test(localCode)) return
+    setLocalCode((c) => `let ${name} = 0; // ← signal in\n${c}`)
+    setDirty(true)
+  }, [localCode])
 
   const extensions = useMemo(() => [
     javascript({ jsx: false }),
@@ -72,6 +110,29 @@ export default function CodePanel({ nodeId, onClose }: Props) {
         <span className="text-2xs text-muted-foreground font-mono">{localCode.split('\n').length} lines</span>
         <span className="text-2xs text-muted-foreground">Ctrl+Enter to apply</span>
       </div>
+
+      {inVars.length > 0 && (
+        <div style={{ padding: '6px 10px', borderBottom: '1px solid #1a1a1a', background: '#0a0a0f' }}>
+          <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: '#0ea5e9', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 5 }}>
+            Signals in · click to declare
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+            {inVars.map(({ source, channel }) => {
+              const declared = new RegExp(`(?:let|var|const)\\s+${channel}\\b`).test(localCode)
+              return (
+                <button key={`${source}:${channel}`} onClick={() => consumeVar(channel)} title={declared ? 'already declared' : `insert "let ${channel} = 0"`}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '2px 7px', borderRadius: 3, cursor: 'pointer',
+                    border: `1px solid ${declared ? '#0ea5e9' : '#243b4a'}`, background: declared ? 'rgba(14,165,233,0.12)' : '#0d141a' }}>
+                  <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: declared ? '#7dd3fc' : '#5f7a8a' }}>{channel}</span>
+                  <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: '#0ea5e9', fontVariantNumeric: 'tabular-nums' }}>
+                    {getSignalValue(source, channel).toFixed(2)}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="flex-1 overflow-auto">
         <CodeMirror

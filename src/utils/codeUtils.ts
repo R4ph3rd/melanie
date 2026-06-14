@@ -194,6 +194,21 @@ ${patchedCode}
 </script></body></html>`
 }
 
+// ─── Output channel discovery ─────────────────────────────────────────────────
+
+// Names a sketch publishes via output('channel', value) — the data it can feed
+// to another sketch. Scanned statically so the names show before the sketch runs.
+export function extractOutputChannels(code: string): string[] {
+  const re = /\boutput\s*\(\s*['"]([a-zA-Z_$][\w$]*)['"]/g
+  const out: string[] = []
+  const seen = new Set<string>()
+  let m: RegExpExecArray | null
+  while ((m = re.exec(code)) !== null) {
+    if (!seen.has(m[1])) { seen.add(m[1]); out.push(m[1]) }
+  }
+  return out
+}
+
 // ─── Code extraction ──────────────────────────────────────────────────────────
 
 export function extractCodeFromResponse(text: string): string {

@@ -17,6 +17,7 @@ type SketchNodeType = Node<SketchNodeData, 'sketch'>
 
 const PREVIEW_W = 260
 const PREVIEW_H = 200
+const SIGNAL_COLOR = '#0ea5e9'
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
@@ -261,8 +262,12 @@ const SketchNode = memo(function SketchNode({ id, data, selected }: NodeProps<Sk
         color={nodeAccent} handleStyle={S.resizerHandle} lineStyle={{ display: 'none' }}
         onResize={(_, p) => store.updateSketchDims(id, p.width, p.height)}
       />
-      <Handle type="target" position={Position.Left}  id="left"  style={{ ...S.rfHandle, background: nodeAccent }} />
-      <Handle type="source" position={Position.Right} id="right" style={{ ...S.rfHandle, background: nodeAccent }} />
+      {/* Data flow (operators) */}
+      <Handle type="target" position={Position.Left}  id="left"  style={{ ...S.rfHandle, top: '38%', background: nodeAccent }} title="data in" />
+      <Handle type="source" position={Position.Right} id="right" style={{ ...S.rfHandle, top: '38%', background: nodeAccent }} title="data out" />
+      {/* Signals (sketch → sketch): every output() channel flows downstream */}
+      <Handle type="target" position={Position.Left}  id="sig-in"  style={{ ...S.rfHandle, top: '68%', borderRadius: 5, background: SIGNAL_COLOR }} title="signals in" />
+      <Handle type="source" position={Position.Right} id="sig-out" style={{ ...S.rfHandle, top: '68%', borderRadius: 5, background: SIGNAL_COLOR }} title="signals out" />
 
       <div style={S.header}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
