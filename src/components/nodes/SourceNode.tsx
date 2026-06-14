@@ -2,6 +2,7 @@ import { memo, useEffect, useRef, useState, useCallback } from 'react'
 import { Handle, Position, NodeResizer, type NodeProps, type Node } from '@xyflow/react'
 import type { SourceNodeData, LFOShape, SourceType } from '../../utils/types'
 import { SOURCE_CHANNELS } from '../../utils/types'
+import { sourceColor } from '../../utils/nodeCatalog'
 import { setSignalValue } from '../../store/signals'
 import { useStore } from '../../store/store'
 import Icon from '../ui/Icon'
@@ -25,21 +26,14 @@ function handleTop(i: number, total: number) { return `${100 * (i + 1) / (total 
 
 // ── Meta ──────────────────────────────────────────────────────────────────────
 
-const SOURCE_META: Record<SourceType, { color: string; label: string }> = {
-  lfo:          { color: '#0ea5e9', label: 'LFO' },
-  clock:        { color: '#f59e0b', label: 'Clock' },
-  noise:        { color: '#8b5cf6', label: 'Noise' },
-  pattern:      { color: '#ec4899', label: 'Pattern' },
-  random:       { color: '#6366f1', label: 'Random' },
-  audio:        { color: '#10b981', label: 'Level' },
-  'audio-fft':  { color: '#14b8a6', label: 'FFT' },
-  'audio-beat': { color: '#f97316', label: 'Beat' },
-  mouse:        { color: '#a3e635', label: 'Mouse' },
-  keyboard:     { color: '#facc15', label: 'Keyboard' },
-  scroll:       { color: '#fb923c', label: 'Scroll' },
-  midi:         { color: '#e879f9', label: 'MIDI' },
-  webcam:       { color: '#60a5fa', label: 'Webcam' },
-  constant:     { color: '#94a3b8', label: 'Constant' },
+// Labels only — node color is derived from category (see sourceColor).
+const SOURCE_LABEL: Record<SourceType, string> = {
+  lfo: 'LFO', clock: 'Clock', noise: 'Noise', pattern: 'Pattern', random: 'Random',
+  audio: 'Mic Level', 'audio-fft': 'Audio FFT', 'audio-beat': 'Audio Beat',
+  mouse: 'Mouse', keyboard: 'Keyboard', scroll: 'Scroll', midi: 'MIDI',
+  webcam: 'Webcam', video: 'Video In',
+  'video-threshold': 'Threshold', 'video-edge': 'Edge',
+  constant: 'Constant',
 }
 
 const LFO_SHAPES: LFOShape[] = ['sine', 'square', 'saw', 'triangle']
@@ -100,11 +94,13 @@ function SliderRow({ label, min, max, step, value, color, fmt, onChange }: Slide
 
 const SourceNode = memo(function SourceNode({ id, data, selected }: NodeProps<SourceNodeType>) {
   const store    = useStore()
-  const meta     = SOURCE_META[data.sourceType] ?? SOURCE_META.lfo
-  const color    = meta.color
+  const label    = SOURCE_LABEL[data.sourceType] ?? data.sourceType
+  const color    = sourceColor(data.sourceType)
   const channels = SOURCE_CHANNELS[data.sourceType] ?? ['value']
   const [liveVal, setLiveVal] = useState(0)
   const noiseTable = useRef<Float32Array | null>(null)
+  const mediaCanvasRef = useRef<HTMLCanvasElement>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   const set = useCallback((patch: Partial<SourceNodeData>) => store.updateSource(id, patch), [id, store])
 
@@ -447,6 +443,90 @@ const SourceNode = memo(function SourceNode({ id, data, selected }: NodeProps<So
     return () => { cancelAnimationFrame(raf); stream?.getTracks().forEach((t) => t.stop()) }
   }, [id, data.sourceType])
 
+  // ── Video file ────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (data.sourceType !== 'video' || !data.src) return
+    let raf: number
+    const video = document.createElement('video')
+    video.src = data.src; video.loop = true; video.muted = true; video.playsInline = true
+    video.play().catch(() => {})
+    const small = document.createElement('canvas'); small.width = 64; small.height = 48
+    const sctx = small.getContext('2d')!
+    let prev: Uint8ClampedArray | null = null
+    const tick = () => {
+      if (video.readyState >= 2) {
+        const cv = mediaCanvasRef.current
+        if (cv) cv.getContext('2d')!.drawImage(video, 0, 0, cv.width, cv.height)
+        sctx.drawImage(video, 0, 0, 64, 48)
+        const d = sctx.getImageData(0, 0, 64, 48).data; const len = d.length / 4
+        let r = 0, g = 0, b = 0, motion = 0
+        for (let i = 0; i < len; i++) {
+          r += d[i*4]; g += d[i*4+1]; b += d[i*4+2]
+          if (prev) { const dr = d[i*4]-prev[i*4], dg = d[i*4+1]-prev[i*4+1], db = d[i*4+2]-prev[i*4+2]; motion += Math.sqrt(dr*dr+dg*dg+db*db) }
+        }
+        const nr = r/(len*255), ng = g/(len*255), nb = b/(len*255), brightness = (nr+ng+nb)/3
+        setSignalValue(id, 'brightness', brightness)
+        setSignalValue(id, 'r', nr); setSignalValue(id, 'g', ng); setSignalValue(id, 'b', nb)
+        setSignalValue(id, 'motion', Math.min(1, motion/(len*255)))
+        setLiveVal(brightness); prev = new Uint8ClampedArray(d)
+      }
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => { cancelAnimationFrame(raf); video.pause(); video.removeAttribute('src') }
+  }, [id, data.sourceType, data.src])
+
+  // ── Video Threshold / Edge (webcam → processed) ─────────────────────────────
+  useEffect(() => {
+    if (data.sourceType !== 'video-threshold' && data.sourceType !== 'video-edge') return
+    const isEdge = data.sourceType === 'video-edge'
+    let stream: MediaStream | null = null; let raf: number
+    const video = document.createElement('video'); video.muted = true; video.playsInline = true
+    const W = 96, H = 72
+    const buf = document.createElement('canvas'); buf.width = W; buf.height = H
+    const bctx = buf.getContext('2d')!
+    navigator.mediaDevices.getUserMedia({ video: true, audio: false }).then((s) => {
+      stream = s; video.srcObject = s; video.play()
+      const tick = () => {
+        if (video.readyState >= 2) {
+          bctx.drawImage(video, 0, 0, W, H)
+          const img = bctx.getImageData(0, 0, W, H); const d = img.data
+          const gray = new Float32Array(W * H)
+          for (let i = 0; i < W * H; i++) gray[i] = (d[i*4]*0.299 + d[i*4+1]*0.587 + d[i*4+2]*0.114) / 255
+          let hit = 0
+          if (isEdge) {
+            for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+              const i = y*W + x
+              const gx = x < W-1 ? Math.abs(gray[i] - gray[i+1]) : 0
+              const gy = y < H-1 ? Math.abs(gray[i] - gray[i+W]) : 0
+              const e = (gx + gy) > (data.threshold ?? 0.18) ? 1 : 0
+              hit += e
+              const v = e ? 255 : 0
+              d[i*4] = d[i*4+1] = d[i*4+2] = v; d[i*4+3] = 255
+            }
+          } else {
+            const t = data.threshold ?? 0.5
+            for (let i = 0; i < W * H; i++) {
+              const v = gray[i] >= t ? 255 : 0
+              if (v) hit++
+              d[i*4] = d[i*4+1] = d[i*4+2] = v; d[i*4+3] = 255
+            }
+          }
+          bctx.putImageData(img, 0, 0)
+          const cv = mediaCanvasRef.current
+          if (cv) cv.getContext('2d')!.drawImage(buf, 0, 0, cv.width, cv.height)
+          const ratio = hit / (W * H)
+          if (isEdge) setSignalValue(id, 'density', ratio)
+          else { setSignalValue(id, 'ratio', ratio); setSignalValue(id, 'level', gray.reduce((a, b) => a + b, 0) / gray.length) }
+          setLiveVal(ratio)
+        }
+        raf = requestAnimationFrame(tick)
+      }
+      raf = requestAnimationFrame(tick)
+    }).catch(() => {})
+    return () => { cancelAnimationFrame(raf); stream?.getTracks().forEach((t) => t.stop()) }
+  }, [id, data.sourceType, data.threshold])
+
   // ── Constant ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (data.sourceType !== 'constant') return
@@ -475,7 +555,7 @@ const SourceNode = memo(function SourceNode({ id, data, selected }: NodeProps<So
           <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22, flexShrink: 0, border: `2px solid ${color}`, borderRadius: 2 }}>
             <Icon name={st} size={10} />
           </span>
-          <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>{meta.label}</span>
+          <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>{label}</span>
         </span>
         <button style={S.deleteBtn} onClick={() => store.deleteNode(id)} title="Delete">
           <Icon name="delete" size={9} />
@@ -564,6 +644,28 @@ const SourceNode = memo(function SourceNode({ id, data, selected }: NodeProps<So
         {st === 'webcam' && (
           <p style={S.dim}><span style={{ color }}>brightness · r · g · b · motion</span></p>
         )}
+
+        {st === 'video' && <>
+          <input ref={fileRef} type="file" accept="video/*" className="nodrag" style={{ display: 'none' }}
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) set({ src: URL.createObjectURL(f), fileName: f.name }) }} />
+          <button onClick={() => fileRef.current?.click()} className="nodrag"
+            style={{ padding: '4px 8px', borderRadius: 3, border: `1px solid ${color}66`, background: 'transparent', color, fontSize: 11, cursor: 'pointer', fontFamily: 'var(--font-sans)', textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {data.fileName ? `▸ ${data.fileName}` : 'Choose video…'}
+          </button>
+          {data.src && <canvas ref={mediaCanvasRef} width={148} height={84} style={{ width: '100%', borderRadius: 3, background: '#000', display: 'block' }} />}
+          <p style={S.dim}><span style={{ color }}>brightness · r · g · b · motion</span></p>
+        </>}
+
+        {(st === 'video-threshold' || st === 'video-edge') && <>
+          <canvas ref={mediaCanvasRef} width={148} height={84} style={{ width: '100%', borderRadius: 3, background: '#000', display: 'block' }} />
+          <SliderRow label={st === 'video-edge' ? 'sensitivity' : 'threshold'}
+            min={0.02} max={st === 'video-edge' ? 0.6 : 1} step={0.01}
+            value={(data.threshold as number) ?? (st === 'video-edge' ? 0.18 : 0.5)} color={color}
+            onChange={(v) => set({ threshold: v })} />
+          <p style={S.dim}>
+            {st === 'video-edge' ? <>webcam edges → <span style={{ color }}>density</span></> : <>webcam → <span style={{ color }}>ratio · level</span></>}
+          </p>
+        </>}
 
         {st === 'constant' && (
           <SliderRow label="value" min={0} max={1} step={0.01} value={(data.value as number) ?? 0.5} color={color} onChange={(v) => set({ value: v })} />

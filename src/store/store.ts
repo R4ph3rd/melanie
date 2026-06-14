@@ -247,6 +247,8 @@ export const useStore = create<MelanieStore>((set, get) => ({
       pattern:      { bpm: 120, length: 8, steps: Array(8).fill(0) },
       random:       { freq: 2, smooth: true },
       constant:     { value: 0.5 },
+      'video-threshold': { threshold: 0.5 },
+      'video-edge':      { threshold: 0.18 },
     }
     const defaults = DEFAULTS[sourceType] ?? {}
     set((s) => ({
