@@ -28,6 +28,12 @@ const ParameterSliders = memo(function ParameterSliders({ nodeId, params }: Prop
   const [editingName, setEditingName] = useState<string | null>(null)
   const [editDraft,   setEditDraft]   = useState('')
 
+  // Must be declared before any early return to satisfy Rules of Hooks.
+  const bindingFor = useCallback(
+    (paramName: string) => signalBindings.find((b) => b.targetNodeId === nodeId && b.paramName === paramName),
+    [signalBindings, nodeId],
+  )
+
   if (params.length === 0) return null
 
   function applyValue(param: Parameter, raw: number) {
@@ -53,11 +59,6 @@ const ParameterSliders = memo(function ParameterSliders({ nodeId, params }: Prop
 
   const isPickingUp = (name: string) =>
     draggingParam?.sourceNodeId === nodeId && draggingParam.param.name === name
-
-  const bindingFor = useCallback(
-    (paramName: string) => signalBindings.find((b) => b.targetNodeId === nodeId && b.paramName === paramName),
-    [signalBindings, nodeId],
-  )
 
   function sourceLabel(sourceNodeId: string, channel: string) {
     const n = nodes.find((n) => n.id === sourceNodeId)
